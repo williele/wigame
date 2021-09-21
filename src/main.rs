@@ -1,6 +1,6 @@
-use std::{sync::Arc, thread, time::Duration};
+use std::{thread, time::Duration};
 
-use app::{Components, Entity, Query};
+use app::{Entity, World};
 use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -21,32 +21,28 @@ impl Entities {
 }
 
 fn main() {
-    let mut entities = Entities::default();
-    let mut components = Components::default();
-    let a = entities.alloc();
-    let b = entities.alloc();
-    let c = entities.alloc();
+    let mut world = World::default();
+    for i in 0..10_000 {
+        if rand::random::<bool>() {
+            world.spawn().with(Foo(i)).with(Bar(i)).build();
+        } else {
+            world.spawn().with(Foo(i)).build();
+        }
+    }
 
-    components.insert(a, Foo(0));
-    components.insert(a, Bar(0));
-    components.insert(b, Foo(1));
-    components.insert(c, Foo(2));
-    components.insert(c, Bar(2));
+    let ents = world.query().with::<Foo>().with::<Bar>().vec();
 
-    let ents = Query::new::<Foo>(&components).or_with::<Bar>().vec();
-    let components = Arc::new(components);
-
-    let c = components.clone();
+    let c = world.components();
     ents.par_iter().for_each(move |ent| {
         c.get_unchecked::<Foo>(ent.clone()).write().0 += 1;
         if let Some(bar) = c.get::<Bar>(ent.clone()) {
             bar.write().0 += 1;
         }
-        thread::sleep(Duration::from_millis(200));
+        thread::sleep(Duration::from_millis(20));
     });
 
-    let c = components.clone();
-    ents.par_iter().for_each(move |ent| {
+    let c = world.components();
+    ents.iter().for_each(move |ent| {
         let foo = c.get_unchecked::<Foo>(ent.clone()).read();
         let bar = c.get::<Bar>(ent.clone()).map(|v| v.read());
         println!("{:?}) {:?} {:?}", ent, foo, bar);

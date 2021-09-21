@@ -13,18 +13,6 @@ pub struct Components {
 }
 
 impl Components {
-    pub fn insert<T: Component>(&mut self, entity: Entity, component: T) {
-        let set = if let Some(set) = self.set.get_mut::<ComponentSet<T>>() {
-            set
-        } else {
-            let set = ComponentSet::<T>::default();
-            self.set.insert(set);
-            self.set.get_mut::<ComponentSet<T>>().unwrap()
-        };
-
-        set.insert(entity, RwLock::new(component));
-    }
-
     pub fn get_set<T: Component>(&self) -> Option<&ComponentSet<T>> {
         self.set.get::<ComponentSet<T>>()
     }
@@ -39,5 +27,17 @@ impl Components {
 
     pub fn get_bitset<T: Component>(&self) -> Option<&BitSet> {
         self.get_set::<T>().map(|set| set.bitset())
+    }
+
+    pub fn insert<T: Component>(&mut self, entity: Entity, component: T) {
+        let set = if let Some(set) = self.set.get_mut::<ComponentSet<T>>() {
+            set
+        } else {
+            let set = ComponentSet::<T>::default();
+            self.set.insert(set);
+            self.set.get_mut::<ComponentSet<T>>().unwrap()
+        };
+
+        set.insert(entity, RwLock::new(component));
     }
 }

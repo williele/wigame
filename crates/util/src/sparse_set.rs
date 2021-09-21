@@ -33,6 +33,11 @@ impl<I: SparseIndex, V> SparseArray<I, V> {
     }
 
     #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    #[inline]
     pub fn bitset(&self) -> &BitSet {
         &self.bitset
     }
