@@ -5,34 +5,34 @@ use std::{
 
 #[derive(Debug, Default)]
 pub struct AnyMap {
-    map: HashMap<TypeId, Box<dyn Any>>,
+    map: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
 impl AnyMap {
-    pub fn get<T: Any>(&self) -> Option<&T> {
+    pub fn get<T: Any + Send + Sync>(&self) -> Option<&T> {
         let type_id = TypeId::of::<T>();
         self.map.get(&type_id).and_then(|v| v.downcast_ref::<T>())
     }
 
-    pub fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
+    pub fn get_mut<T: Any + Send + Sync>(&mut self) -> Option<&mut T> {
         let type_id = TypeId::of::<T>();
         self.map
             .get_mut(&type_id)
             .and_then(|v| v.downcast_mut::<T>())
     }
 
-    pub fn has<T: Any>(&self) -> bool {
+    pub fn has<T: Any + Send + Sync>(&self) -> bool {
         let type_id = TypeId::of::<T>();
         self.map.contains_key(&type_id)
     }
 
-    pub fn insert<T: Any>(&mut self, value: T) -> Option<T> {
+    pub fn insert<T: Any + Send + Sync>(&mut self, value: T) -> Option<T> {
         self.map
             .insert(value.type_id(), Box::new(value))
             .and_then(|v| v.downcast::<T>().ok().map(|v| *v))
     }
 
-    pub fn remove<T: Any>(&mut self) -> Option<T> {
+    pub fn remove<T: Any + Send + Sync>(&mut self) -> Option<T> {
         let type_id = TypeId::of::<T>();
         self.map
             .remove(&type_id)

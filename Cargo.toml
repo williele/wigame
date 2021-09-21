@@ -10,3 +10,4 @@ members = ["crates/app", "crates/util"]
 
 [dependencies]
 app = { path = "./crates/app" }
+rayon = "1.5.1"
