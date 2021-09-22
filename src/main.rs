@@ -1,4 +1,4 @@
-use app::{Query, Scheduler, System, World};
+use app::{Lock, QueryExc, Read, Scheduler, System, World};
 use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -9,24 +9,27 @@ struct Bar(i32);
 
 struct WriteSystem;
 
+fn process_foo(value: &mut Foo) {
+    value.0 += 1;
+}
+
 impl System for WriteSystem {
     fn run(&mut self, components: &app::Components) {
-        let ents = Query::empty(components).with::<Foo>().with::<Bar>().vec();
-        ents.par_iter().for_each(|ent| {
-            components.get_unchecked::<Foo>(ent.clone()).write().0 += 1;
-            components.get_unchecked::<Bar>(ent.clone()).write().0 += 1;
-        });
+        QueryExc::<Lock<Foo>>::of(components)
+            .with::<Bar>()
+            .vec()
+            .par_iter()
+            .for_each(|foo| process_foo(&mut foo.write()))
     }
 }
 
 struct ReadSystem;
 impl System for ReadSystem {
     fn run(&mut self, components: &app::Components) {
-        let ents = Query::empty(components).with::<Foo>().with::<Bar>().vec();
-        ents.par_iter().for_each(|ent| {
-            let _foo = components.get_unchecked::<Foo>(ent.clone()).read();
-            let _bar = components.get_unchecked::<Bar>(ent.clone()).read();
-        });
+        QueryExc::<(Read<Foo>, Read<Bar>)>::of(components)
+            .vec()
+            .par_iter()
+            .for_each(|(foo, bar)| assert_eq!(foo.0 - bar.0, 1));
     }
 }
 
