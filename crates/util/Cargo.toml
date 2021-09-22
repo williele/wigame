@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 bit-set = "0.5.2"
 parking_lot = "0.11.2"
+rayon = "1.5.1"

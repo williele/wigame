@@ -29,7 +29,7 @@ impl Components {
         self.get_set::<T>().map(|set| set.bitset())
     }
 
-    pub fn insert<T: Component>(&mut self, entity: Entity, component: T) {
+    pub(crate) fn insert<T: Component>(&mut self, entity: Entity, component: T) {
         let set = if let Some(set) = self.set.get_mut::<ComponentSet<T>>() {
             set
         } else {
