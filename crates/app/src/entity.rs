@@ -56,20 +56,20 @@ impl Entities {
         }
     }
 
-    pub fn delloc(&mut self, entity: Entity) -> bool {
-        if self.is_live(entity) {
-            self.entries[entity.id as usize].is_live = true;
-            self.pending.push(entity.id);
-            true
-        } else {
-            false
-        }
-    }
+    // pub fn delloc(&mut self, entity: Entity) -> bool {
+    //     if self.is_live(entity) {
+    //         self.entries[entity.id as usize].is_live = true;
+    //         self.pending.push(entity.id);
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
 
-    pub fn is_live(&self, entity: Entity) -> bool {
-        let index = entity.id as usize;
-        index < self.entries.len()
-            && self.entries[index].generation == entity.generation
-            && self.entries[index].is_live
-    }
+    // pub fn is_live(&self, entity: Entity) -> bool {
+    //     let index = entity.id as usize;
+    //     index < self.entries.len()
+    //         && self.entries[index].generation == entity.generation
+    //         && self.entries[index].is_live
+    // }
 }

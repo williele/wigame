@@ -5,7 +5,7 @@ use util::{
     parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use crate::{Component, Components, Entity};
+use crate::{entity::Entity, Component, Components};
 
 pub trait Filter<'a> {
     type Item;
@@ -120,75 +120,3 @@ tuple_impl!(A, B, C, D, E, F, G, H, I, J, K);
 tuple_impl!(A, B, C, D, E, F, G, H, I, J, K, L);
 tuple_impl!(A, B, C, D, E, F, G, H, I, J, K, L, M);
 tuple_impl!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-
-pub struct QueryExc<'a, F: Filter<'a>> {
-    bitset: BitSet,
-    components: &'a Components,
-    _marker: PhantomData<F>,
-}
-
-impl<'a, F: Filter<'a>> QueryExc<'a, F> {
-    pub fn of(components: &'a Components) -> Self {
-        let bitset = F::bitset(components);
-        QueryExc {
-            bitset,
-            components,
-            _marker: Default::default(),
-        }
-    }
-
-    pub fn with<T: Component>(&mut self) -> &mut Self {
-        self.bitset
-            .intersect_with(self.components.get_bitset::<T>().unwrap());
-        self
-    }
-
-    pub fn without<T: Component>(&mut self) -> &mut Self {
-        self.bitset
-            .symmetric_difference_with(self.components.get_bitset::<T>().unwrap());
-        self
-    }
-
-    pub fn vec(&self) -> Vec<F::Item> {
-        self.bitset
-            .into_iter()
-            .map(|id| Entity::new(id as u32, 0))
-            .map(|ent| F::get_unchecked(self.components, ent))
-            .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use util::rayon::prelude::*;
-
-    use crate::World;
-
-    use super::*;
-
-    #[derive(Debug)]
-    struct Foo(i32);
-    #[derive(Debug)]
-    struct Bar(i32);
-    #[derive(Debug)]
-    struct Baz(i32);
-
-    #[test]
-    fn query() {
-        let mut world = World::default();
-        world.spawn().with(Foo(0)).with(Bar(1)).build();
-        world.spawn().with(Foo(0)).build();
-        world
-            .spawn()
-            .with(Foo(0))
-            .with(Bar(2))
-            .with(Baz(10))
-            .build();
-
-        QueryExc::<(Read<Foo>, Try<Read<Bar>>)>::of(world.components())
-            .with::<Baz>()
-            .vec()
-            .par_iter()
-            .for_each(|data| println!("{:?}", data));
-    }
-}

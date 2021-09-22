@@ -1,6 +1,6 @@
 use std::cell::UnsafeCell;
 
-use crate::Components;
+use crate::{Components, QueryEntry};
 use util::rayon::prelude::*;
 
 #[derive(Default)]
@@ -9,7 +9,7 @@ pub struct Scheduler {
 }
 
 pub trait System: 'static + Send + Sync {
-    fn run(&mut self, components: &Components);
+    fn run(&mut self, query: &QueryEntry);
 }
 
 struct SystemBox(UnsafeCell<Box<dyn System>>);
@@ -24,9 +24,11 @@ impl Scheduler {
     }
 
     pub fn execute(&mut self, components: &Components) {
+        let entry = QueryEntry::new(components);
+
         self.systems.par_iter_mut().for_each(|system| {
             let system = system.0.get_mut();
-            system.run(components);
+            system.run(&entry);
         });
     }
 }

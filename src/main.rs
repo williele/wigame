@@ -1,35 +1,38 @@
-use app::{Lock, QueryExc, Read, Scheduler, System, World};
+use app::{Lock, Read, Scheduler, System, World};
 use rayon::prelude::*;
 
 #[derive(Debug)]
 struct Foo(i32);
+impl Foo {
+    fn increment(&mut self) {
+        self.0 += 1;
+    }
+}
 
 #[derive(Debug)]
 struct Bar(i32);
 
 struct WriteSystem;
 
-fn process_foo(value: &mut Foo) {
-    value.0 += 1;
-}
-
 impl System for WriteSystem {
-    fn run(&mut self, components: &app::Components) {
-        QueryExc::<Lock<Foo>>::of(components)
+    fn run(&mut self, query: &app::QueryEntry) {
+        query
+            .filter::<Lock<Foo>>()
             .with::<Bar>()
             .vec()
             .par_iter()
-            .for_each(|foo| process_foo(&mut foo.write()))
+            .for_each(|foo| foo.write().increment());
     }
 }
 
 struct ReadSystem;
 impl System for ReadSystem {
-    fn run(&mut self, components: &app::Components) {
-        QueryExc::<(Read<Foo>, Read<Bar>)>::of(components)
+    fn run(&mut self, query: &app::QueryEntry) {
+        query
+            .filter::<(Read<Foo>, Read<Bar>)>()
             .vec()
             .par_iter()
-            .for_each(|(foo, bar)| assert_eq!(foo.0 - bar.0, 1));
+            .for_each(|_| {})
     }
 }
 

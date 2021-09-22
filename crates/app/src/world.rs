@@ -1,4 +1,7 @@
-use crate::{Component, Components, Entities, Entity, Query};
+use crate::{
+    entity::{Entities, Entity},
+    Component, Components,
+};
 
 #[derive(Default)]
 pub struct World {
@@ -28,10 +31,6 @@ impl World {
             components: &mut self.components,
             entity: self.entities.alloc(),
         }
-    }
-
-    pub fn query(&self) -> Query {
-        Query::empty(&self.components)
     }
 
     pub fn components(&self) -> &Components {
