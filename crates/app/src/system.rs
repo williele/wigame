@@ -1,6 +1,6 @@
 use std::cell::UnsafeCell;
 
-use crate::{Components, QueryEntry};
+use crate::{QueryEntry, World};
 use util::rayon::prelude::*;
 
 #[derive(Default)]
@@ -23,8 +23,8 @@ impl Scheduler {
         self
     }
 
-    pub fn execute(&mut self, components: &Components) {
-        let entry = QueryEntry::new(components);
+    pub fn execute(&mut self, world: &World) {
+        let entry = QueryEntry::new(world);
 
         self.systems.par_iter_mut().for_each(|system| {
             let system = system.0.get_mut();

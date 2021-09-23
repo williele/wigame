@@ -1,4 +1,4 @@
-use app::{Lock, Read, Scheduler, System, World};
+use app::{App, Entities, Lock, Read, System, Try};
 use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -22,6 +22,12 @@ impl System for WriteSystem {
             .vec()
             .par_iter()
             .for_each(|foo| foo.write().increment());
+
+        query
+            .filter::<(Entities, Read<Foo>, Try<Read<Bar>>)>()
+            .vec()
+            .par_iter()
+            .for_each(|data| println!("{:?}", data));
     }
 }
 
@@ -29,25 +35,23 @@ struct ReadSystem;
 impl System for ReadSystem {
     fn run(&mut self, query: &app::QueryEntry) {
         query
-            .filter::<(Read<Foo>, Read<Bar>)>()
+            .filter::<(Entities, Read<Foo>, Read<Bar>)>()
             .vec()
             .par_iter()
-            .for_each(|_| {})
+            .for_each(|data| println!("{:?}", data))
     }
 }
 
 fn main() {
-    let mut world = World::default();
-    for i in 0..1_000_000 {
+    let mut app = App::new();
+    app.add_system(WriteSystem);
+    for i in 0..100 {
         if rand::random::<bool>() {
-            world.spawn().with(Foo(i)).with(Bar(i)).build();
+            app.spawn().with(Foo(i)).with(Bar(i)).build();
         } else {
-            world.spawn().with(Foo(i)).build();
+            app.spawn().with(Foo(i)).build();
         }
     }
 
-    let mut scheduler = Scheduler::default();
-    scheduler.add(WriteSystem).add(ReadSystem);
-
-    scheduler.execute(world.components());
+    app.update();
 }

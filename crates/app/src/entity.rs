@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use util::sparse_set::SparseIndex;
+use util::{bit_set::BitSet, sparse_set::SparseIndex};
 
 #[derive(Clone, Copy)]
 pub struct Entity {
@@ -10,7 +10,7 @@ pub struct Entity {
 
 impl Debug for Entity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ent{}", self.id)
+        write!(f, "{}v{}", self.id, self.generation)
     }
 }
 
@@ -26,7 +26,7 @@ impl SparseIndex for Entity {
     }
 }
 
-struct EntityEntry {
+pub(crate) struct EntityEntry {
     is_live: bool,
     generation: u32,
 }
@@ -34,32 +34,51 @@ struct EntityEntry {
 #[derive(Default)]
 pub(crate) struct Entities {
     entries: Vec<EntityEntry>,
+    bitset: BitSet,
     pending: Vec<u32>,
 }
 
 impl Entities {
+    #[inline]
+    pub(crate) fn get_entity(&self, id: u32) -> Option<Entity> {
+        self.entries
+            .get(id as usize)
+            .and_then(|entry| entry.is_live.then(|| Entity::new(id, entry.generation)))
+    }
+
+    #[inline]
+    pub(crate) fn get_bitset(&self) -> &BitSet {
+        &self.bitset
+    }
+
     pub fn alloc(&mut self) -> Entity {
         match self.pending.pop() {
             Some(id) => {
                 let index = id as usize;
-                self.entries[index].generation += 1;
-                self.entries[index].is_live = true;
-                Entity::new(id, self.entries[index].generation)
+                let entry = &mut self.entries[index];
+                entry.generation += 1;
+                entry.is_live = true;
+                self.bitset.insert(index);
+                Entity::new(id, entry.generation)
             }
             None => {
+                let id = self.entries.len();
                 self.entries.push(EntityEntry {
                     is_live: true,
                     generation: 0,
                 });
-                Entity::new(self.entries.len() as u32 - 1, 0)
+                self.bitset.insert(id);
+                Entity::new(id as u32, 0)
             }
         }
     }
 
     // pub fn delloc(&mut self, entity: Entity) -> bool {
     //     if self.is_live(entity) {
-    //         self.entries[entity.id as usize].is_live = true;
+    //         let index = entity.id as usize;
+    //         self.entries[entity.id as usize].is_live = false;
     //         self.pending.push(entity.id);
+    //         self.bitset.remove(index);
     //         true
     //     } else {
     //         false

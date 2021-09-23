@@ -33,7 +33,11 @@ impl World {
         }
     }
 
-    pub fn components(&self) -> &Components {
+    pub(crate) fn components(&self) -> &Components {
         &self.components
+    }
+
+    pub(crate) fn entities(&self) -> &Entities {
+        &self.entities
     }
 }

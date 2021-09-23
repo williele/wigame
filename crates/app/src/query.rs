@@ -2,56 +2,57 @@ use std::marker::PhantomData;
 
 use util::bit_set::BitSet;
 
-use crate::{entity::Entity, Component, Components, Filter};
+use crate::{Component, Filter, World};
 
 pub struct QueryExc<'a, F: Filter<'a>> {
     bitset: BitSet,
-    components: &'a Components,
+    world: &'a World,
     _marker: PhantomData<F>,
 }
 
 impl<'a, F: Filter<'a>> QueryExc<'a, F> {
-    pub fn of(components: &'a Components) -> Self {
-        let bitset = F::bitset(components);
+    fn of(world: &'a World) -> Self {
+        let mut bitset = world.entities().get_bitset().clone();
+        F::bitset_op(&mut bitset, world);
         QueryExc {
             bitset,
-            components,
+            world,
             _marker: Default::default(),
         }
     }
 
     pub fn with<T: Component>(&mut self) -> &mut Self {
         self.bitset
-            .intersect_with(self.components.get_bitset::<T>().unwrap());
+            .intersect_with(self.world.components().get_bitset::<T>().unwrap());
         self
     }
 
     pub fn without<T: Component>(&mut self) -> &mut Self {
         self.bitset
-            .symmetric_difference_with(self.components.get_bitset::<T>().unwrap());
+            .symmetric_difference_with(self.world.components().get_bitset::<T>().unwrap());
         self
     }
 
     pub fn vec(&self) -> Vec<F::Item> {
         self.bitset
             .into_iter()
-            .map(|id| Entity::new(id as u32, 0))
-            .map(|ent| F::get_unchecked(self.components, ent))
+            .filter_map(|id| self.world.entities().get_entity(id as u32))
+            .map(|entity| F::get_unchecked(self.world, entity))
             .collect()
     }
 }
 
 pub struct QueryEntry<'a> {
-    components: &'a Components,
+    world: &'a World,
 }
 
 impl<'a> QueryEntry<'a> {
-    pub(crate) fn new(components: &'a Components) -> Self {
-        QueryEntry { components }
+    pub(crate) fn new(world: &'a World) -> Self {
+        QueryEntry { world }
     }
 
     pub fn filter<F: Filter<'a>>(&self) -> QueryExc<'a, F> {
-        QueryExc::<F>::of(self.components)
+        QueryExc::<F>::of(self.world)
     }
 }
 
@@ -82,7 +83,7 @@ mod tests {
             .with(Baz(10))
             .build();
 
-        let entry = QueryEntry::new(world.components());
+        let entry = QueryEntry::new(&world);
         entry
             .filter::<(Lock<Foo>, Try<Read<Bar>>)>()
             .vec()

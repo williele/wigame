@@ -1,3 +1,4 @@
+mod app;
 mod component;
 mod entity;
 mod filter;
@@ -5,6 +6,7 @@ mod query;
 mod system;
 mod world;
 
+pub use app::*;
 pub use component::*;
 pub use filter::*;
 pub use query::*;
