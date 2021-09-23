@@ -20,6 +20,10 @@ impl Entity {
     pub fn new(id: u32, generation: u32) -> Self {
         Entity { id, generation }
     }
+
+    pub fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 impl SparseIndex for Entity {

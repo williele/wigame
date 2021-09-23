@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use util::bit_set::BitSet;
 
-use crate::{Component, Filter, World};
+use crate::{entity::Entity, Component, Filter, World};
 
 pub struct QueryExc<'a, F: Filter<'a>> {
     bitset: BitSet,
@@ -33,7 +33,22 @@ impl<'a, F: Filter<'a>> QueryExc<'a, F> {
         self
     }
 
-    pub fn vec(&self) -> Vec<F::Item> {
+    pub fn entity(&self, entity: Entity) -> Option<F::Item> {
+        (self.world.entities().is_live(entity) && self.bitset.contains(entity.id() as usize))
+            .then(|| F::get_unchecked(self.world, entity))
+    }
+
+    pub fn entities(&self, entities: &[Entity]) -> Vec<F::Item> {
+        entities
+            .into_iter()
+            .filter(|&&entity| {
+                self.world.entities().is_live(entity) && self.bitset.contains(entity.id() as usize)
+            })
+            .map(|&entity| F::get_unchecked(self.world, entity))
+            .collect()
+    }
+
+    pub fn all(&self) -> Vec<F::Item> {
         self.bitset
             .into_iter()
             .filter_map(|id| self.world.entities().get_entity(id as u32))
@@ -86,7 +101,7 @@ mod tests {
         let entry = QueryEntry::new(&world);
         entry
             .filter::<(Lock<Foo>, Try<Read<Bar>>)>()
-            .vec()
+            .all()
             .par_iter()
             .for_each(|(foo, bar)| {
                 if let Some(bar) = bar {
@@ -98,7 +113,7 @@ mod tests {
 
         entry
             .filter::<Read<Foo>>()
-            .vec()
+            .all()
             .par_iter()
             .for_each(|foo| println!("{:?}", foo));
     }

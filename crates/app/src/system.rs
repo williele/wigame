@@ -32,7 +32,9 @@ impl Scheduler {
 
         self.systems.par_iter_mut().for_each(|system| {
             let system = system.0.get_mut();
-            system.run(&entry);
+            if system.can_run(&entry) {
+                system.run(&entry);
+            }
         });
     }
 }

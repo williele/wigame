@@ -1,99 +1,27 @@
-use app::{Entities, Lock, Read, System, Try, World};
-use rayon::prelude::*;
+use app::{Entity, Read, World};
+// use rayon::prelude::*;
 
 #[derive(Debug)]
-struct Foo(i32);
-impl Foo {
-    fn increment(&mut self) {
-        self.0 += 1;
-    }
-}
+pub struct Character(i32);
 
 #[derive(Debug)]
-struct Bar(i32);
-
-struct WriteSystem;
-
-impl System for WriteSystem {
-    fn run(&mut self, query: &app::QueryEntry) {
-        query
-            .filter::<Lock<Foo>>()
-            .with::<Bar>()
-            .vec()
-            .par_iter()
-            .for_each(|foo| foo.write().increment());
-
-        query
-            .filter::<(Entities, Read<Foo>, Try<Read<Bar>>)>()
-            .vec()
-            .iter()
-            .for_each(|data| println!("{:?}", data));
-    }
-}
-
-struct ReadSystem;
-impl System for ReadSystem {
-    fn run(&mut self, query: &app::QueryEntry) {
-        query
-            .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-            .vec()
-            .par_iter()
-            .for_each(|data| println!("{:?}", data))
-    }
-}
+pub struct Target(Entity);
 
 fn main() {
     let mut world = World::default();
-    let a = world.spawn().with(Foo(0)).with(Bar(0)).build();
-    let b = world.spawn().with(Foo(1)).with(Bar(1)).build();
-    let _c = world.spawn().with(Foo(2)).with(Bar(2)).build();
 
-    world
+    let a = world.spawn().with(Character(0)).build();
+    world.spawn().with(Character(1)).with(Target(a)).build();
+
+    for (character, target) in world
         .query()
-        .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-        .vec()
-        .iter()
-        .for_each(|data| println!("{:?}", data));
-
-    println!("=============================");
-
-    world.remove_commponent::<Bar>(b);
-    world
-        .query()
-        .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-        .vec()
-        .iter()
-        .for_each(|data| println!("{:?}", data));
-
-    println!("=============================");
-
-    world.despawn(a);
-    world
-        .query()
-        .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-        .vec()
-        .iter()
-        .for_each(|data| println!("{:?}", data));
-
-    println!("=============================");
-
-    world.spawn().with(Foo(0)).with(Bar(0)).build();
-    world
-        .query()
-        .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-        .vec()
-        .iter()
-        .for_each(|data| println!("{:?}", data));
-
-    println!("=============================");
-
-    world.add_component(b, Bar(1));
-    world
-        .query()
-        .filter::<(Entities, Read<Foo>, Read<Bar>)>()
-        .vec()
-        .iter()
-        .for_each(|data| println!("{:?}", data));
+        .filter::<(Read<Character>, Read<Target>)>()
+        .all()
+    {
+        if let Some(target) = world.query().filter::<Read<Character>>().entity(target.0) {
+            println!("{:?} target {:?}", character, target)
+        }
+    }
 
     // let mut app = App::new();
     // app.add_system(WriteSystem);
