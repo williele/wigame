@@ -1,6 +1,8 @@
-use std::fmt::Debug;
+use std::{any::TypeId, collections::HashSet, fmt::Debug};
 
 use util::{bit_set::BitSet, sparse_set::SparseIndex};
+
+use crate::Component;
 
 #[derive(Clone, Copy)]
 pub struct Entity {
@@ -29,6 +31,7 @@ impl SparseIndex for Entity {
 pub(crate) struct EntityEntry {
     is_live: bool,
     generation: u32,
+    components: Option<HashSet<TypeId>>,
 }
 
 #[derive(Default)]
@@ -51,6 +54,25 @@ impl Entities {
         &self.bitset
     }
 
+    pub(crate) fn add_component<T: Component>(&mut self, entity: Entity) {
+        if self.is_live(entity) {
+            let index = entity.id as usize;
+            let components = self.entries[index]
+                .components
+                .get_or_insert(Default::default());
+            components.insert(TypeId::of::<T>());
+        }
+    }
+
+    pub(crate) fn remove_commponent<T: Component>(&mut self, entity: Entity) {
+        if self.is_live(entity) {
+            let index = entity.id as usize;
+            if let Some(components) = &mut self.entries[index].components {
+                components.remove(&TypeId::of::<T>());
+            }
+        }
+    }
+
     pub fn alloc(&mut self) -> Entity {
         match self.pending.pop() {
             Some(id) => {
@@ -65,6 +87,7 @@ impl Entities {
                 let id = self.entries.len();
                 self.entries.push(EntityEntry {
                     is_live: true,
+                    components: None,
                     generation: 0,
                 });
                 self.bitset.insert(id);
@@ -73,22 +96,22 @@ impl Entities {
         }
     }
 
-    // pub fn delloc(&mut self, entity: Entity) -> bool {
-    //     if self.is_live(entity) {
-    //         let index = entity.id as usize;
-    //         self.entries[entity.id as usize].is_live = false;
-    //         self.pending.push(entity.id);
-    //         self.bitset.remove(index);
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
+    pub fn delloc(&mut self, entity: Entity) -> Option<HashSet<TypeId>> {
+        if self.is_live(entity) {
+            let index = entity.id as usize;
+            self.entries[index].is_live = false;
+            self.pending.push(entity.id);
+            self.bitset.remove(index);
+            self.entries[index].components.take()
+        } else {
+            None
+        }
+    }
 
-    // pub fn is_live(&self, entity: Entity) -> bool {
-    //     let index = entity.id as usize;
-    //     index < self.entries.len()
-    //         && self.entries[index].generation == entity.generation
-    //         && self.entries[index].is_live
-    // }
+    pub fn is_live(&self, entity: Entity) -> bool {
+        let index = entity.id as usize;
+        index < self.entries.len()
+            && self.entries[index].generation == entity.generation
+            && self.entries[index].is_live
+    }
 }

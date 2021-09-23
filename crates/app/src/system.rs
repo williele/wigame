@@ -9,6 +9,10 @@ pub struct Scheduler {
 }
 
 pub trait System: 'static + Send + Sync {
+    fn can_run(&mut self, _query: &QueryEntry) -> bool {
+        true
+    }
+
     fn run(&mut self, query: &QueryEntry);
 }
 

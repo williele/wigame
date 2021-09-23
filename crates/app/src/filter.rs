@@ -26,7 +26,7 @@ impl<'a, T: Component> Filter<'a> for Lock<T> {
         bitset.intersect_with(world.components().get_bitset::<T>().unwrap());
     }
     fn get_unchecked(world: &'a World, entity: Entity) -> Self::Item {
-        world.components().get_unchecked::<T>(entity)
+        world.components().get::<T>(entity).unwrap()
     }
     fn get(world: &'a World, entity: Entity) -> Option<Self::Item> {
         world.components().get::<T>(entity)
@@ -44,7 +44,7 @@ impl<'a, T: Component> Filter<'a> for Read<T> {
         bitset.intersect_with(world.components().get_bitset::<T>().unwrap());
     }
     fn get_unchecked(world: &'a World, entity: Entity) -> Self::Item {
-        world.components().get_unchecked::<T>(entity).read()
+        world.components().get::<T>(entity).unwrap().read()
     }
     fn get(world: &'a World, entity: Entity) -> Option<Self::Item> {
         world.components().get::<T>(entity).map(|l| l.read())
@@ -62,7 +62,7 @@ impl<'a, T: Component> Filter<'a> for Write<T> {
         bitset.intersect_with(world.components().get_bitset::<T>().unwrap());
     }
     fn get_unchecked(world: &'a World, entity: Entity) -> Self::Item {
-        world.components().get_unchecked::<T>(entity).write()
+        world.components().get::<T>(entity).unwrap().write()
     }
     fn get(world: &'a World, entity: Entity) -> Option<Self::Item> {
         world.components().get::<T>(entity).map(|l| l.write())

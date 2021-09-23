@@ -1,43 +1,84 @@
-use util::{anymap::AnyMap, bit_set::BitSet, parking_lot::RwLock, sparse_set::SparseSet};
+use std::{any::TypeId, collections::HashMap};
+
+use util::{bit_set::BitSet, blob_sparse_set::BlobSparseSet, parking_lot::RwLock};
 
 use crate::entity::Entity;
 
 pub trait Component: 'static + Send + Sync {}
 impl<T: 'static + Send + Sync> Component for T {}
 
-pub type ComponentSet<T> = SparseSet<Entity, RwLock<T>>;
+pub type ComponentVec = BlobSparseSet<Entity>;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Components {
-    set: AnyMap,
+    vecs: HashMap<TypeId, ComponentVec>,
 }
 
 impl Components {
-    pub fn get_set<T: Component>(&self) -> Option<&ComponentSet<T>> {
-        self.set.get::<ComponentSet<T>>()
+    fn get_vec<T: Component>(&self) -> Option<&ComponentVec> {
+        self.vecs.get(&TypeId::of::<T>())
     }
 
     pub fn get<T: Component>(&self, entity: Entity) -> Option<&RwLock<T>> {
-        self.get_set::<T>().and_then(|set| set.get(entity))
-    }
-
-    pub fn get_unchecked<T: Component>(&self, entity: Entity) -> &RwLock<T> {
-        self.get_set::<T>().unwrap().get_unchecked(entity)
+        self.get_vec::<T>()
+            .and_then(|vec| vec.get::<RwLock<T>>(entity))
     }
 
     pub fn get_bitset<T: Component>(&self) -> Option<&BitSet> {
-        self.get_set::<T>().map(|set| set.bitset())
+        self.get_vec::<T>().map(|set| set.bitset())
     }
 
     pub(crate) fn insert<T: Component>(&mut self, entity: Entity, component: T) {
-        let set = if let Some(set) = self.set.get_mut::<ComponentSet<T>>() {
-            set
+        let type_id = TypeId::of::<T>();
+        let vec = if let Some(vec) = self.vecs.get_mut(&type_id) {
+            vec
         } else {
-            let set = ComponentSet::<T>::default();
-            self.set.insert(set);
-            self.set.get_mut::<ComponentSet<T>>().unwrap()
+            let vec = ComponentVec::of::<RwLock<T>>(0);
+            self.vecs.insert(type_id.clone(), vec);
+            self.vecs.get_mut(&type_id).unwrap()
         };
 
-        set.insert(entity, RwLock::new(component));
+        unsafe { vec.insert_type::<RwLock<T>>(entity, RwLock::new(component)) }
+    }
+
+    pub(crate) fn remove(&mut self, type_id: &TypeId, entity: Entity) {
+        if let Some(vec) = self.vecs.get_mut(type_id) {
+            vec.remove(entity);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::Entities;
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct Foo(i32);
+
+    #[test]
+    fn components() {
+        let mut entities = Entities::default();
+        let mut components = Components::default();
+
+        let a = entities.alloc();
+        let b = entities.alloc();
+        let c = entities.alloc();
+        components.insert(a, Foo(0));
+        components.insert(b, Foo(1));
+        components.insert(c, Foo(2));
+
+        println!("{:?}", components.get::<Foo>(a));
+        println!("{:?}", components.get::<Foo>(b));
+        println!("{:?}", components.get::<Foo>(c));
+        println!("{:?}", components.get_bitset::<Foo>());
+
+        println!("----------------");
+        components.remove(&TypeId::of::<Foo>(), b);
+        println!("{:?}", components.get::<Foo>(a));
+        println!("{:?}", components.get::<Foo>(b));
+        println!("{:?}", components.get::<Foo>(c));
+        println!("{:?}", components.get_bitset::<Foo>());
     }
 }
