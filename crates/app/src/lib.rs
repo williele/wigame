@@ -1,6 +1,7 @@
 mod app;
 mod command;
 mod component;
+mod demo_system;
 mod entity;
 mod filter;
 mod query;
