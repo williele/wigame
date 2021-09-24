@@ -55,6 +55,10 @@ impl World {
         }
     }
 
+    pub fn flush(&mut self) {
+        self.entities.flush();
+    }
+
     pub fn query(&self) -> QueryEntry {
         QueryEntry::new(self)
     }
