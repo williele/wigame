@@ -42,7 +42,8 @@ pub(crate) struct EntityEntry {
 pub(crate) struct Entities {
     entries: Vec<EntityEntry>,
     bitset: BitSet,
-    pending: Vec<u32>,
+    free: Vec<u32>,
+    alloc_pending: Vec<u32>,
 }
 
 impl Entities {
@@ -77,25 +78,33 @@ impl Entities {
         }
     }
 
+    pub fn flush(&mut self) {
+        for id in self.alloc_pending.drain(..) {
+            let index = id as usize;
+            self.entries[index].is_live = true;
+            self.bitset.insert(index);
+        }
+    }
+
     pub fn alloc(&mut self) -> Entity {
-        match self.pending.pop() {
+        match self.free.pop() {
             Some(id) => {
                 let index = id as usize;
                 let entry = &mut self.entries[index];
                 entry.generation += 1;
-                entry.is_live = true;
-                self.bitset.insert(index);
+                entry.is_live = false;
+                self.alloc_pending.push(id);
                 Entity::new(id, entry.generation)
             }
             None => {
-                let id = self.entries.len();
+                let id = self.entries.len() as u32;
                 self.entries.push(EntityEntry {
-                    is_live: true,
+                    is_live: false,
                     components: None,
                     generation: 0,
                 });
-                self.bitset.insert(id);
-                Entity::new(id as u32, 0)
+                self.alloc_pending.push(id);
+                Entity::new(id, 0)
             }
         }
     }
@@ -104,7 +113,7 @@ impl Entities {
         if self.is_live(entity) {
             let index = entity.id as usize;
             self.entries[index].is_live = false;
-            self.pending.push(entity.id);
+            self.free.push(entity.id);
             self.bitset.remove(index);
             self.entries[index].components.take()
         } else {

@@ -1,4 +1,4 @@
-use app::{Entity, Read, World};
+use app::{Entity, Read, System, World};
 // use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -6,6 +6,19 @@ pub struct Character(i32);
 
 #[derive(Debug)]
 pub struct Target(Entity);
+
+struct DemoSystem;
+impl System for DemoSystem {
+    fn run(&mut self, command: &mut app::CommandBuffer, query: &app::QueryEntry) {
+        query
+            .filter::<(Read<Character>, Read<Target>)>()
+            .all()
+            .iter()
+            .for_each(|(_, target)| {
+                command.despawn(target.0);
+            });
+    }
+}
 
 fn main() {
     let mut world = World::default();

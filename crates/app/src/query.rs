@@ -11,7 +11,7 @@ pub struct QueryExc<'a, F: Filter<'a>> {
 }
 
 impl<'a, F: Filter<'a>> QueryExc<'a, F> {
-    fn of(world: &'a World) -> Self {
+    pub(crate) fn of(world: &'a World) -> Self {
         let mut bitset = world.entities().get_bitset().clone();
         F::bitset_op(&mut bitset, world);
         QueryExc {

@@ -1,7 +1,6 @@
 use std::cell::UnsafeCell;
 
-use crate::{QueryEntry, World};
-use util::rayon::prelude::*;
+use crate::{CommandBuffer, QueryEntry, World};
 
 #[derive(Default)]
 pub struct Scheduler {
@@ -13,7 +12,7 @@ pub trait System: 'static + Send + Sync {
         true
     }
 
-    fn run(&mut self, query: &QueryEntry);
+    fn run(&mut self, command: &mut CommandBuffer, query: &QueryEntry);
 }
 
 struct SystemBox(UnsafeCell<Box<dyn System>>);
@@ -27,14 +26,16 @@ impl Scheduler {
         self
     }
 
-    pub fn execute(&mut self, world: &World) {
+    pub fn execute(&mut self, world: &mut World) {
         let entry = QueryEntry::new(world);
+        let mut command = CommandBuffer::new();
 
-        self.systems.par_iter_mut().for_each(|system| {
+        self.systems.iter_mut().for_each(|system| {
             let system = system.0.get_mut();
             if system.can_run(&entry) {
-                system.run(&entry);
+                system.run(&mut command, &entry);
             }
         });
+        command.flush(world);
     }
 }

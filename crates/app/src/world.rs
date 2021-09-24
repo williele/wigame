@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use crate::{
     entity::{Entities, Entity},
     Component, Components, QueryEntry,
@@ -39,7 +37,7 @@ impl World {
         if let Some(components) = self.entities.delloc(entity) {
             components
                 .iter()
-                .for_each(|id| self.components.remove(id, entity))
+                .for_each(|id| self.components.remove_raw(id, entity))
         }
     }
 
@@ -52,8 +50,7 @@ impl World {
 
     pub fn remove_commponent<C: Component>(&mut self, entity: Entity) {
         if self.entities.is_live(entity) {
-            let type_id = TypeId::of::<C>();
-            self.components.remove(&type_id, entity);
+            self.components.remove::<C>(entity);
             self.entities.remove_commponent::<C>(entity);
         }
     }
@@ -66,7 +63,15 @@ impl World {
         &self.components
     }
 
+    // pub(crate) fn components_mut(&mut self) -> &mut Components {
+    //     &mut self.components
+    // }
+
     pub(crate) fn entities(&self) -> &Entities {
         &self.entities
+    }
+
+    pub(crate) fn entities_mut(&mut self) -> &mut Entities {
+        &mut self.entities
     }
 }

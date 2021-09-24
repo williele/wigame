@@ -15,14 +15,18 @@ pub struct BlobSparseSet<I> {
 }
 
 impl<I: SparseIndex> BlobSparseSet<I> {
-    unsafe fn drop_ptr<T>(ptr: *mut u8) {
+    pub(crate) unsafe fn drop_ptr<T>(ptr: *mut u8) {
         ptr.cast::<T>().drop_in_place()
     }
 
     pub fn of<T: 'static>(capacity: usize) -> Self {
         let layout = Layout::new::<T>();
+        BlobSparseSet::new(layout, Self::drop_ptr::<T>, capacity)
+    }
+
+    pub fn new(layout: Layout, drop: unsafe fn(*mut u8), capacity: usize) -> Self {
         BlobSparseSet {
-            dense: BlobVec::new(layout, Self::drop_ptr::<T>, capacity),
+            dense: BlobVec::new(layout, drop, capacity),
             incides: Vec::with_capacity(capacity),
             sparse: SparseArray::with_capacity(capacity),
         }

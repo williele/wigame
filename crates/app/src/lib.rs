@@ -1,4 +1,5 @@
 mod app;
+mod command;
 mod component;
 mod entity;
 mod filter;
@@ -7,6 +8,7 @@ mod system;
 mod world;
 
 pub use app::*;
+pub use command::*;
 pub use component::*;
 pub use entity::Entity;
 pub use filter::*;

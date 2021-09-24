@@ -1,4 +1,4 @@
-use crate::{Scheduler, System, World, WorldExt};
+use crate::{Scheduler, System, World};
 
 #[derive(Default)]
 pub struct App {
@@ -17,10 +17,6 @@ impl App {
     }
 
     pub fn update(&mut self) {
-        self.scheduler.execute(&self.world);
-    }
-
-    pub fn spawn(&mut self) -> WorldExt {
-        self.world.spawn()
+        self.scheduler.execute(&mut self.world);
     }
 }

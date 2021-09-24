@@ -285,6 +285,7 @@ dependencies = [
  "bit-set",
  "parking_lot",
  "rayon",
+ "smallvec",
 ]
 
 [[package]]
