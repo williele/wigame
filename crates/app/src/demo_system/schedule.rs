@@ -69,12 +69,21 @@ impl ScheduleExec {
 
 #[cfg(test)]
 mod tests {
+    use crate::demo_query::{Query, Read, Write};
     use crate::demo_system::system::SystemBuilder;
 
     use super::*;
 
+    struct Foo(i32);
+    struct Bar(i32);
+
     fn foo_system() -> impl ParRunnable {
-        SystemBuilder::new().build(|_, _| println!("foo"))
+        SystemBuilder::new()
+            .with_query(Query::<&Foo>::new())
+            .with_query(Query::<&mut Bar>::new())
+            .build(|_, (foo, bar)| {
+                println!("foo");
+            })
     }
 
     fn bar_system() -> impl ParRunnable {

@@ -24,12 +24,20 @@ unsafe impl<T> Sync for Read<T> {}
 impl<T: Component> IntoView for Read<T> {
     type View = Self;
 }
+impl<'a, T: Component> IntoView for &'a T {
+    type View = Read<T>;
+}
 
 impl<'a, T: Component> View<'a> for Read<T> {
     type Item = &'a T;
 
     fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.intersect_with(world.components().get_bitset::<T>().unwrap());
+        bitset.intersect_with(
+            world
+                .components()
+                .get_bitset::<T>()
+                .unwrap_or(&BitSet::new()),
+        );
     }
 
     fn fetch(entity: Entity, world: &World) -> Self::Item {
@@ -54,12 +62,20 @@ unsafe impl<T> Sync for Write<T> {}
 impl<T: Component> IntoView for Write<T> {
     type View = Self;
 }
+impl<'a, T: Component> IntoView for &'a mut T {
+    type View = Write<T>;
+}
 
 impl<'a, T: Component> View<'a> for Write<T> {
     type Item = &'a mut T;
 
     fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.intersect_with(world.components().get_bitset::<T>().unwrap());
+        bitset.intersect_with(
+            world
+                .components()
+                .get_bitset::<T>()
+                .unwrap_or(&BitSet::new()),
+        );
     }
 
     fn fetch(entity: Entity, world: &World) -> Self::Item {
@@ -84,12 +100,20 @@ unsafe impl<T> Sync for TryRead<T> {}
 impl<T: Component> IntoView for TryRead<T> {
     type View = Self;
 }
+impl<'a, T: Component> IntoView for Option<&'a T> {
+    type View = TryRead<T>;
+}
 
 impl<'a, T: Component> View<'a> for TryRead<T> {
     type Item = Option<&'a T>;
 
     fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.union_with(world.components().get_bitset::<T>().unwrap());
+        bitset.union_with(
+            world
+                .components()
+                .get_bitset::<T>()
+                .unwrap_or(&BitSet::new()),
+        );
     }
 
     fn fetch(entity: Entity, world: &World) -> Self::Item {
@@ -111,12 +135,20 @@ unsafe impl<T> Sync for TryWrite<T> {}
 impl<T: Component> IntoView for TryWrite<T> {
     type View = Self;
 }
+impl<'a, T: Component> IntoView for Option<&'a mut T> {
+    type View = TryWrite<T>;
+}
 
 impl<'a, T: Component> View<'a> for TryWrite<T> {
     type Item = Option<&'a mut T>;
 
     fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.union_with(world.components().get_bitset::<T>().unwrap());
+        bitset.union_with(
+            world
+                .components()
+                .get_bitset::<T>()
+                .unwrap_or(&BitSet::new()),
+        );
     }
 
     fn fetch(entity: Entity, world: &World) -> Self::Item {
