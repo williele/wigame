@@ -63,10 +63,6 @@ impl World {
         &self.components
     }
 
-    // pub(crate) fn components_mut(&mut self) -> &mut Components {
-    //     &mut self.components
-    // }
-
     pub(crate) fn entities(&self) -> &Entities {
         &self.entities
     }

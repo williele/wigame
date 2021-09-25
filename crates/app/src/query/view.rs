@@ -38,11 +38,9 @@ impl<'a, T: Component> View<'a> for Read<T> {
     fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
             components
-                .get::<T>(entity)
-                .unwrap()
-                .data_ptr()
-                .as_ref()
-                .unwrap()
+                .get_ptr::<T>(entity)
+                .and_then(|ptr| ptr.cast::<T>().as_ref())
+                .expect("failed to cast ReadView")
         }
     }
 }
@@ -70,11 +68,9 @@ impl<'a, T: Component> View<'a> for Write<T> {
     fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
             components
-                .get::<T>(entity)
-                .unwrap()
-                .data_ptr()
-                .as_mut()
-                .unwrap()
+                .get_ptr::<T>(entity)
+                .and_then(|ptr| ptr.cast::<T>().as_mut())
+                .expect("failed to cast WriteView")
         }
     }
 }
@@ -102,8 +98,8 @@ impl<'a, T: Component> View<'a> for TryRead<T> {
     fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
             components
-                .get::<T>(entity)
-                .and_then(|l| l.data_ptr().as_ref())
+                .get_ptr::<T>(entity)
+                .and_then(|ptr| ptr.cast::<T>().as_ref())
         }
     }
 }
@@ -131,8 +127,8 @@ impl<'a, T: Component> View<'a> for TryWrite<T> {
     fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
             components
-                .get::<T>(entity)
-                .and_then(|l| l.data_ptr().as_mut())
+                .get_ptr::<T>(entity)
+                .and_then(|ptr| ptr.cast::<T>().as_mut())
         }
     }
 }
