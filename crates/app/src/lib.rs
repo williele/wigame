@@ -1,9 +1,9 @@
-mod app;
-mod component;
-mod entity;
-mod query;
-mod system;
-mod world;
+pub mod app;
+pub mod component;
+pub mod entity;
+pub mod query;
+pub mod system;
+pub mod world;
 
 pub use app::*;
 pub use component::*;

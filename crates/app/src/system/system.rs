@@ -2,7 +2,7 @@ use util::cons::{ConsAppend, ConsFlatten};
 
 use crate::{CommandBuffer, IntoView, Query, World};
 
-use super::schedule::Runnable;
+use super::executor::Runnable;
 
 pub trait QuerySet: Send + Sync {}
 
