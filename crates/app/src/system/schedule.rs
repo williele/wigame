@@ -22,9 +22,9 @@ unsafe impl Send for SystemBox {}
 unsafe impl Sync for SystemBox {}
 
 impl SystemBox {
-    unsafe fn get(&self) -> &dyn ParRunnable {
-        std::ops::Deref::deref(&*self.0.get())
-    }
+    // unsafe fn get(&self) -> &dyn ParRunnable {
+    //     std::ops::Deref::deref(&*self.0.get())
+    // }
 
     unsafe fn get_mut(&self) -> &mut dyn ParRunnable {
         std::ops::DerefMut::deref_mut(&mut *self.0.get())
@@ -47,7 +47,7 @@ impl ScheduleExec {
 
     pub fn execute(&mut self, world: &mut World) {
         self.run_systems(world);
-        // self.flush_command_buffers(world, resources);
+        self.flush_command_buffers(world);
     }
 
     pub fn run_systems(&mut self, world: &mut World) {
@@ -69,8 +69,8 @@ impl ScheduleExec {
 
 #[cfg(test)]
 mod tests {
-    use crate::demo_query::{Query, Read, Write};
-    use crate::demo_system::system::SystemBuilder;
+    use crate::system::system::SystemBuilder;
+    use crate::Query;
 
     use super::*;
 

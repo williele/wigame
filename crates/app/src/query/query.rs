@@ -40,10 +40,6 @@ mod tests {
     #[derive(Debug)]
     struct Bar(i32);
 
-    struct SubWorld<'a> {
-        world: &'a World,
-    }
-
     #[test]
     fn query() {
         let mut world = World::default();

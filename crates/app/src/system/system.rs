@@ -1,7 +1,6 @@
 use util::cons::{ConsAppend, ConsFlatten};
 
-use super::super::demo_query::{IntoView, Query};
-use crate::{CommandBuffer, World};
+use crate::{CommandBuffer, IntoView, Query, World};
 
 use super::schedule::Runnable;
 

@@ -1,8 +1,6 @@
-use util::bit_set::BitSet;
-
 use crate::{
     entity::{Entities, Entity},
-    Component, Components, QueryEntry,
+    Component, Components,
 };
 
 #[derive(Default)]
@@ -61,17 +59,13 @@ impl World {
         self.entities.flush();
     }
 
-    pub fn query(&self) -> QueryEntry {
-        QueryEntry::new(self)
-    }
-
     pub(crate) fn components(&self) -> &Components {
         &self.components
     }
 
-    pub(crate) fn components_mut(&mut self) -> &mut Components {
-        &mut self.components
-    }
+    // pub(crate) fn components_mut(&mut self) -> &mut Components {
+    //     &mut self.components
+    // }
 
     pub(crate) fn entities(&self) -> &Entities {
         &self.entities

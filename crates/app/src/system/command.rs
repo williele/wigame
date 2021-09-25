@@ -46,7 +46,7 @@ impl<C: Component> WorldWritable for AddComponentCommand<C> {
     }
 }
 
-enum Command {
+pub enum Command {
     WriteWorld(Arc<dyn WorldWritable>),
 }
 
