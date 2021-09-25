@@ -1,7 +1,7 @@
 use util::cons::{ConsAppend, ConsFlatten};
 
 use super::super::demo_query::{IntoView, Query};
-use crate::CommandBuffer;
+use crate::{CommandBuffer, World};
 
 use super::schedule::Runnable;
 
@@ -9,7 +9,10 @@ pub trait QuerySet: Send + Sync {}
 
 macro_rules! impl_queryset_tuple {
     ($($name: ident),*) => {
-        impl<$($name: QuerySet,)*> QuerySet for ($($name,)*) {}
+        impl<$($name,)*> QuerySet for ($($name,)*)
+        where
+            $($name: QuerySet,)*
+        {}
     };
 }
 
@@ -18,8 +21,8 @@ macro_rules! queryset_tuple {
         impl_queryset_tuple!($head_ty);
     };
     ($head_ty:ident, $( $tail_ty:ident ),*) => (
-        impl_queryset_tuple!($head_ty, $( $tail_ty ),*);
-        queryset_tuple!($( $tail_ty ),*);
+        impl_queryset_tuple!($head_ty, $($tail_ty),*);
+        queryset_tuple!($($tail_ty),*);
     );
 }
 
@@ -29,16 +32,16 @@ impl QuerySet for () {}
 impl<V> QuerySet for Query<V> where V: IntoView + Send + Sync {}
 
 pub trait SystemFn<Q> {
-    fn run(&mut self, commands: &mut CommandBuffer, queries: &mut Q);
+    fn run(&mut self, world: &World, commands: &mut CommandBuffer, queries: &mut Q);
 }
 
 impl<F, Q> SystemFn<Q> for F
 where
     Q: QuerySet,
-    F: FnMut(&mut CommandBuffer, &mut Q),
+    F: FnMut(&World, &mut CommandBuffer, &mut Q),
 {
-    fn run(&mut self, commands: &mut CommandBuffer, queries: &mut Q) {
-        (self)(commands, queries);
+    fn run(&mut self, world: &World, commands: &mut CommandBuffer, queries: &mut Q) {
+        (self)(world, commands, queries);
     }
 }
 
@@ -57,12 +60,12 @@ where
         self.command_buffer.as_mut()
     }
 
-    unsafe fn run_unsafe(&mut self, _world: &crate::World) {
+    unsafe fn run_unsafe(&mut self, world: &crate::World) {
         let queries = &mut self.queries;
         let command = self.command_buffer.get_or_insert(CommandBuffer::new());
 
         let borrow_fn = &mut self.run_fn;
-        borrow_fn.run(command, queries);
+        borrow_fn.run(world, command, queries);
     }
 }
 
@@ -94,12 +97,12 @@ where
         }
     }
 
-    pub fn build<F>(self, run_fn: F) -> System<Q, F>
+    pub fn build<F>(self, run_fn: F) -> System<<Q as ConsFlatten>::Output, F>
     where
-        F: FnMut(&mut CommandBuffer, &mut Q),
+        F: FnMut(&World, &mut CommandBuffer, &mut <Q as ConsFlatten>::Output),
     {
         System {
-            queries: self.queries,
+            queries: self.queries.flatten(),
             run_fn,
             command_buffer: None,
         }

@@ -74,25 +74,45 @@ mod tests {
 
     use super::*;
 
+    #[derive(Debug)]
     struct Foo(i32);
+    #[derive(Debug)]
     struct Bar(i32);
 
     fn foo_system() -> impl ParRunnable {
         SystemBuilder::new()
-            .with_query(Query::<&Foo>::new())
-            .with_query(Query::<&mut Bar>::new())
-            .build(|_, (foo, bar)| {
-                println!("foo");
+            .with_query(Query::<(&mut Foo, &Bar)>::new())
+            .with_query(Query::<&Bar>::new())
+            .build(|world, _, (foos, bars)| {
+                println!("----- foo");
+                for (foo, bar) in foos.iter(world) {
+                    foo.0 += 1 + bar.0;
+                }
+
+                for bar in bars.iter(world) {
+                    println!("{:?}", bar);
+                }
             })
     }
 
     fn bar_system() -> impl ParRunnable {
-        SystemBuilder::new().build(|_, _| println!("bar"))
+        SystemBuilder::new()
+            .with_query(Query::<(&Foo, Option<&Bar>)>::new())
+            .build(|world, _, bars| {
+                println!("----- bar");
+                for data in bars.iter(world) {
+                    println!("{:?}", data)
+                }
+            })
     }
 
     #[test]
     fn schedule_exec() {
         let mut world = World::default();
+        world.spawn().with(Foo(0)).with(Bar(0)).build();
+        world.spawn().with(Foo(1)).build();
+        world.spawn().with(Foo(2)).with(Bar(2)).build();
+        world.flush();
 
         let mut exec = ScheduleExec::new(vec![Box::new(foo_system()), Box::new(bar_system())]);
         exec.execute(&mut world);

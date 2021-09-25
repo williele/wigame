@@ -13,7 +13,7 @@ mod world;
 pub use app::*;
 pub use command::*;
 pub use component::*;
-pub use entity::Entity;
+pub use entity::*;
 pub use filter::*;
 pub use query::*;
 pub use system::*;

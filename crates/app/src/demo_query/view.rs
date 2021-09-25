@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use util::bit_set::BitSet;
 
-use crate::{Component, Entity, World};
+use crate::{Component, Components, Entity};
 
 pub trait IntoView {
     type View: for<'a> View<'a> + 'static;
@@ -11,8 +11,8 @@ pub trait IntoView {
 pub trait View<'a>: Sized {
     type Item: Send + Sync + 'a;
 
-    fn filter(bitset: &mut BitSet, world: &World);
-    fn fetch(entity: Entity, world: &World) -> Self::Item;
+    fn filter(bitset: &mut BitSet, components: &Components);
+    fn fetch(entity: Entity, components: &Components) -> Self::Item;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -31,19 +31,13 @@ impl<'a, T: Component> IntoView for &'a T {
 impl<'a, T: Component> View<'a> for Read<T> {
     type Item = &'a T;
 
-    fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.intersect_with(
-            world
-                .components()
-                .get_bitset::<T>()
-                .unwrap_or(&BitSet::new()),
-        );
+    fn filter(bitset: &mut BitSet, components: &Components) {
+        bitset.intersect_with(components.get_bitset::<T>().unwrap_or(&BitSet::new()));
     }
 
-    fn fetch(entity: Entity, world: &World) -> Self::Item {
+    fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
-            world
-                .components()
+            components
                 .get::<T>(entity)
                 .unwrap()
                 .data_ptr()
@@ -69,19 +63,13 @@ impl<'a, T: Component> IntoView for &'a mut T {
 impl<'a, T: Component> View<'a> for Write<T> {
     type Item = &'a mut T;
 
-    fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.intersect_with(
-            world
-                .components()
-                .get_bitset::<T>()
-                .unwrap_or(&BitSet::new()),
-        );
+    fn filter(bitset: &mut BitSet, components: &Components) {
+        bitset.intersect_with(components.get_bitset::<T>().unwrap_or(&BitSet::new()));
     }
 
-    fn fetch(entity: Entity, world: &World) -> Self::Item {
+    fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
-            world
-                .components()
+            components
                 .get::<T>(entity)
                 .unwrap()
                 .data_ptr()
@@ -107,19 +95,13 @@ impl<'a, T: Component> IntoView for Option<&'a T> {
 impl<'a, T: Component> View<'a> for TryRead<T> {
     type Item = Option<&'a T>;
 
-    fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.union_with(
-            world
-                .components()
-                .get_bitset::<T>()
-                .unwrap_or(&BitSet::new()),
-        );
+    fn filter(bitset: &mut BitSet, components: &Components) {
+        bitset.union_with(components.get_bitset::<T>().unwrap_or(&BitSet::new()));
     }
 
-    fn fetch(entity: Entity, world: &World) -> Self::Item {
+    fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
-            world
-                .components()
+            components
                 .get::<T>(entity)
                 .and_then(|l| l.data_ptr().as_ref())
         }
@@ -142,19 +124,13 @@ impl<'a, T: Component> IntoView for Option<&'a mut T> {
 impl<'a, T: Component> View<'a> for TryWrite<T> {
     type Item = Option<&'a mut T>;
 
-    fn filter(bitset: &mut BitSet, world: &World) {
-        bitset.union_with(
-            world
-                .components()
-                .get_bitset::<T>()
-                .unwrap_or(&BitSet::new()),
-        );
+    fn filter(bitset: &mut BitSet, components: &Components) {
+        bitset.union_with(components.get_bitset::<T>().unwrap_or(&BitSet::new()));
     }
 
-    fn fetch(entity: Entity, world: &World) -> Self::Item {
+    fn fetch(entity: Entity, components: &Components) -> Self::Item {
         unsafe {
-            world
-                .components()
+            components
                 .get::<T>(entity)
                 .and_then(|l| l.data_ptr().as_mut())
         }
@@ -174,8 +150,8 @@ impl IntoView for Entities {
 impl<'a> View<'a> for Entities {
     type Item = Entity;
 
-    fn filter(_bitset: &mut BitSet, _world: &World) {}
-    fn fetch(entity: Entity, _world: &World) -> Self::Item {
+    fn filter(_bitset: &mut BitSet, _components: &Components) {}
+    fn fetch(entity: Entity, _components: &Components) -> Self::Item {
         entity
     }
 }
@@ -185,11 +161,11 @@ macro_rules! view_tuple {
         impl<'a, $($name: View<'a> + 'a),*> View<'a> for ($($name,)*) {
             type Item = ($($name::Item,)*);
 
-            fn filter(bitset: &mut BitSet, world: &World) {
-                $($name::filter(bitset, world);)*
+            fn filter(bitset: &mut BitSet, components: &Components) {
+                $($name::filter(bitset, components);)*
             }
-            fn fetch(entity: Entity, world: &World) -> Self::Item {
-                ($($name::fetch(entity, world),)*)
+            fn fetch(entity: Entity, components: &Components) -> Self::Item {
+                ($($name::fetch(entity, components),)*)
             }
         }
 

@@ -1,4 +1,4 @@
-// https://github.com/amethyst/legion/blob/master/src/internals/cons.rs
+// https://raw.githubusercontent.com/amethyst/legion/master/src/internals/cons.rs
 // Things happen here, and they work.
 //                       ,---.
 //                       /    |
@@ -88,36 +88,36 @@ impl ConsFlatten for () {
 }
 
 macro_rules! cons {
-  () => (
-      ()
-  );
-  ($head:tt) => (
-      ($head, ())
-  );
-  ($head:tt, $($tail:tt),*) => (
-      ($head, cons!($($tail),*))
-  );
+    () => (
+        ()
+    );
+    ($head:tt) => (
+        ($head, ())
+    );
+    ($head:tt, $($tail:tt),*) => (
+        ($head, cons!($($tail),*))
+    );
 }
 
 macro_rules! impl_flatten {
-  ($($items:ident),*) => {
-  #[allow(unused_parens)] // This is added because the nightly compiler complains
-      impl<$($items),*> ConsFlatten for cons!($($items),*)
-      {
-          type Output = ($($items),*);
-          fn flatten(self) -> Self::Output {
-              #[allow(non_snake_case)]
-              let cons!($($items),*) = self;
-              ($($items),*)
-          }
-      }
+    ($($items:ident),*) => {
+    #[allow(unused_parens)] // This is added because the nightly compiler complains
+        impl<$($items),*> ConsFlatten for cons!($($items),*)
+        {
+            type Output = ($($items),*);
+            fn flatten(self) -> Self::Output {
+                #[allow(non_snake_case)]
+                let cons!($($items),*) = self;
+                ($($items),*)
+            }
+        }
 
-      impl_flatten!(@ $($items),*);
-  };
-  (@ $head:ident, $($tail:ident),*) => {
-      impl_flatten!($($tail),*);
-  };
-  (@ $head:ident) => {};
+        impl_flatten!(@ $($items),*);
+    };
+    (@ $head:ident, $($tail:ident),*) => {
+        impl_flatten!($($tail),*);
+    };
+    (@ $head:ident) => {};
 }
 
 impl_flatten!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);

@@ -39,7 +39,7 @@ pub(crate) struct EntityEntry {
 }
 
 #[derive(Default)]
-pub(crate) struct Entities {
+pub struct Entities {
     entries: Vec<EntityEntry>,
     bitset: BitSet,
     free: Vec<u32>,
@@ -78,7 +78,7 @@ impl Entities {
         }
     }
 
-    pub fn flush(&mut self) {
+    pub(crate) fn flush(&mut self) {
         for id in self.alloc_pending.drain(..) {
             let index = id as usize;
             self.entries[index].is_live = true;
@@ -86,7 +86,7 @@ impl Entities {
         }
     }
 
-    pub fn alloc(&mut self) -> Entity {
+    pub(crate) fn alloc(&mut self) -> Entity {
         match self.free.pop() {
             Some(id) => {
                 let index = id as usize;
@@ -109,7 +109,7 @@ impl Entities {
         }
     }
 
-    pub fn delloc(&mut self, entity: Entity) -> Option<HashSet<TypeId>> {
+    pub(crate) fn delloc(&mut self, entity: Entity) -> Option<HashSet<TypeId>> {
         if self.is_live(entity) {
             let index = entity.id as usize;
             self.entries[index].is_live = false;
@@ -121,7 +121,7 @@ impl Entities {
         }
     }
 
-    pub fn is_live(&self, entity: Entity) -> bool {
+    pub(crate) fn is_live(&self, entity: Entity) -> bool {
         let index = entity.id as usize;
         index < self.entries.len()
             && self.entries[index].generation == entity.generation

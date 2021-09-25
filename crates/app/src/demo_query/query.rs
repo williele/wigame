@@ -16,13 +16,13 @@ impl<V: IntoView> Query<V> {
         }
     }
 
-    pub fn iter(&self, world: &World) -> Vec<<V::View as View>::Item> {
+    pub fn iter<'a>(&'a self, world: &'a World) -> Vec<<V::View as View>::Item> {
         let mut bitset = world.entities().get_bitset().clone();
-        <V::View as View>::filter(&mut bitset, &world);
+        <V::View as View>::filter(&mut bitset, world.components());
         bitset
             .into_iter()
             .filter_map(|id| world.entities().get_entity(id as u32))
-            .map(|entity| <V::View as View>::fetch(entity, &world))
+            .map(|entity| <V::View as View>::fetch(entity, world.components()))
             .collect()
     }
 }
@@ -39,6 +39,10 @@ mod tests {
 
     #[derive(Debug)]
     struct Bar(i32);
+
+    struct SubWorld<'a> {
+        world: &'a World,
+    }
 
     #[test]
     fn query() {

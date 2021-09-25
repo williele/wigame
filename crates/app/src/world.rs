@@ -1,3 +1,5 @@
+use util::bit_set::BitSet;
+
 use crate::{
     entity::{Entities, Entity},
     Component, Components, QueryEntry,
@@ -67,9 +69,9 @@ impl World {
         &self.components
     }
 
-    // pub(crate) fn components_mut(&mut self) -> &mut Components {
-    //     &mut self.components
-    // }
+    pub(crate) fn components_mut(&mut self) -> &mut Components {
+        &mut self.components
+    }
 
     pub(crate) fn entities(&self) -> &Entities {
         &self.entities

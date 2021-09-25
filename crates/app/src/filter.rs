@@ -87,21 +87,21 @@ impl<'a, T: Filter<'a>> Filter<'a> for Try<T> {
     }
 }
 
-pub struct Entities;
-impl<'a> Filter<'a> for Entities {
-    type Item = Entity;
+// pub struct Entities;
+// impl<'a> Filter<'a> for Entities {
+//     type Item = Entity;
 
-    fn bitset(world: &'a World) -> BitSet {
-        world.entities().get_bitset().clone()
-    }
-    fn bitset_op(_bitset: &mut BitSet, _world: &'a World) {}
-    fn get_unchecked(_world: &'a World, entity: Entity) -> Self::Item {
-        entity
-    }
-    fn get(_world: &'a World, entity: Entity) -> Option<Self::Item> {
-        Some(entity)
-    }
-}
+//     fn bitset(world: &'a World) -> BitSet {
+//         world.entities().get_bitset().clone()
+//     }
+//     fn bitset_op(_bitset: &mut BitSet, _world: &'a World) {}
+//     fn get_unchecked(_world: &'a World, entity: Entity) -> Self::Item {
+//         entity
+//     }
+//     fn get(_world: &'a World, entity: Entity) -> Option<Self::Item> {
+//         Some(entity)
+//     }
+// }
 
 macro_rules! tuple_impl {
     ($($name: ident), *) => {
