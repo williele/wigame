@@ -55,7 +55,7 @@ impl Components {
 
 #[cfg(test)]
 mod tests {
-    use crate::entity::Entities;
+    use crate::entity::EntityAllocator;
 
     use super::*;
 
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn components() {
-        let mut entities = Entities::default();
+        let mut entities = EntityAllocator::default();
         let mut components = Components::default();
 
         let a = entities.alloc();

@@ -95,11 +95,20 @@ mod tests {
     #[derive(Debug)]
     struct Bar(i32);
 
+    fn startup() -> impl ParRunnable {
+        SystemBuilder::new().build(|world, cmd, _| {
+            println!("startup: spawn entity");
+            cmd.spawn(world).add(Foo(0)).add(Bar(0));
+            cmd.spawn(world).add(Foo(1));
+            cmd.spawn(world).add(Foo(2)).add(Bar(2));
+        })
+    }
+
     fn first1() -> impl ParRunnable {
         SystemBuilder::new()
             .with_query(Query::<(&mut Foo, &Bar)>::new())
             .build(|world, _, query| {
-                println!("first 1: update foo");
+                println!("first 1: update entity");
                 query
                     .iter(world)
                     .into_iter()
@@ -126,6 +135,7 @@ mod tests {
                 println!("second: despawn none bar");
                 query.iter(world).into_iter().for_each(|(ent, _, bar)| {
                     if bar.is_none() {
+                        println!("{:?}", ent);
                         cmd.despawn(ent);
                     }
                 });
@@ -147,17 +157,14 @@ mod tests {
     #[test]
     fn schedule() {
         let mut world = World::default();
-        world.spawn().with(Foo(0)).with(Bar(0)).build();
-        world.spawn().with(Foo(1)).build();
-        world.spawn().with(Foo(2)).with(Bar(2)).build();
-        world.flush();
-
         let mut schedule = Schedule::default();
 
+        schedule.add_stage("startup", Stage::sequence());
         schedule.add_stage("first", Stage::sequence());
         schedule.add_stage_after("first", "second", Stage::sequence());
         schedule.add_stage_after("second", "third", Stage::sequence());
 
+        schedule.add_system_to_stage("startup", startup());
         schedule.add_system_to_stage("first", first1());
         schedule.add_system_to_stage("first", first2());
         schedule.add_system_to_stage("second", second());

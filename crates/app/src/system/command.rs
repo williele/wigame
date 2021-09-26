@@ -66,6 +66,21 @@ impl CommandBuffer {
             .push_front(Command::WriteWorld(Arc::new(writer)));
     }
 
+    pub fn edit(&mut self, entity: Entity) -> CommandEntityEditor {
+        CommandEntityEditor {
+            entity,
+            command_buffer: self,
+        }
+    }
+
+    pub fn spawn(&mut self, world: &World) -> CommandEntityEditor {
+        let entity = world.reserve_entity();
+        CommandEntityEditor {
+            entity,
+            command_buffer: self,
+        }
+    }
+
     pub fn despawn(&mut self, entity: Entity) -> &mut Self {
         self.push_writer(DespawnCommand(entity));
         self
@@ -85,11 +100,37 @@ impl CommandBuffer {
     }
 
     pub fn flush(&mut self, world: &mut World) {
-        world.entities_mut().flush();
+        world.flush();
         while let Some(command) = self.commands.pop_back() {
             match command {
                 Command::WriteWorld(arc) => arc.write(world, self),
             }
         }
+    }
+}
+
+pub struct CommandEntityEditor<'a> {
+    entity: Entity,
+    command_buffer: &'a mut CommandBuffer,
+}
+
+impl<'a> CommandEntityEditor<'a> {
+    pub fn add<T: Component>(&mut self, component: T) -> &mut Self {
+        self.command_buffer.add_component(self.entity, component);
+        self
+    }
+
+    pub fn remove<T: Component>(&mut self) -> &mut Self {
+        self.command_buffer.remove_component::<T>(self.entity);
+        self
+    }
+
+    pub fn despawn<T: Component>(&mut self) -> Entity {
+        self.command_buffer.despawn(self.entity);
+        self.entity
+    }
+
+    pub fn entity(&self) -> Entity {
+        self.entity
     }
 }
