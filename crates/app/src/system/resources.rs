@@ -64,27 +64,17 @@ impl_downcast!(Resource);
 
 pub trait ResourceSet<'a> {
     type Item: 'a;
-
-    unsafe fn fetch_unchecked(resources: &'a UnsafeResources) -> Self::Item;
-    fn fetch_mut(resources: &'a mut Resources) -> Self::Item {
-        unsafe { Self::fetch_unchecked(&resources.internal) }
-    }
-
-    fn fetch(resources: &'a Resources) -> Self::Item {
-        unsafe { Self::fetch_unchecked(&resources.internal) }
-    }
+    unsafe fn fetch(resources: &'a RawResources) -> Self::Item;
 }
 
 impl<'a> ResourceSet<'a> for () {
     type Item = ();
-
-    unsafe fn fetch_unchecked(_resources: &'a UnsafeResources) -> Self::Item {}
+    unsafe fn fetch(_resources: &'a RawResources) -> Self::Item {}
 }
 
 impl<'a, T: Resource> ResourceSet<'a> for Read<T> {
     type Item = AtomicRef<'a, T>;
-
-    unsafe fn fetch_unchecked(resources: &'a UnsafeResources) -> Self::Item {
+    unsafe fn fetch(resources: &'a RawResources) -> Self::Item {
         let type_id = &ResourceTypeId::of::<T>();
         resources
             .get(type_id)
@@ -96,7 +86,7 @@ impl<'a, T: Resource> ResourceSet<'a> for Read<T> {
 impl<'a, T: Resource> ResourceSet<'a> for Write<T> {
     type Item = AtomicRefMut<'a, T>;
 
-    unsafe fn fetch_unchecked(resources: &'a UnsafeResources) -> Self::Item {
+    unsafe fn fetch(resources: &'a RawResources) -> Self::Item {
         let type_id = &ResourceTypeId::of::<T>();
         resources
             .get(&type_id)
@@ -128,9 +118,8 @@ macro_rules! impl_resource_tuple {
         impl<'a, $($ty: ResourceSet<'a>),*> ResourceSet<'a> for ($($ty,)*)
         {
             type Item = ($($ty::Item,)*);
-
-            unsafe fn fetch_unchecked(resources: &'a UnsafeResources) -> Self::Item {
-                ($( $ty::fetch_unchecked(resources), )*)
+            unsafe fn fetch(resources: &'a RawResources) -> Self::Item {
+                ($( $ty::fetch(resources), )*)
             }
         }
     };
@@ -164,13 +153,13 @@ impl ResourceCell {
 }
 
 #[derive(Default)]
-pub struct UnsafeResources {
+pub struct RawResources {
     map: HashMap<ResourceTypeId, ResourceCell>,
 }
-unsafe impl Send for UnsafeResources {}
-unsafe impl Sync for UnsafeResources {}
+unsafe impl Send for RawResources {}
+unsafe impl Sync for RawResources {}
 
-impl UnsafeResources {
+impl RawResources {
     fn contains(&self, type_id: &ResourceTypeId) -> bool {
         self.map.contains_key(type_id)
     }
@@ -203,12 +192,12 @@ impl UnsafeResources {
 
 #[derive(Default)]
 pub struct Resources {
-    internal: UnsafeResources,
+    internal: RawResources,
     _not_send_sync: PhantomData<*const u8>,
 }
 
 impl Resources {
-    pub(crate) fn internal(&self) -> &UnsafeResources {
+    pub(crate) fn internal(&self) -> &RawResources {
         &self.internal
     }
 
@@ -296,7 +285,7 @@ impl Resources {
 }
 
 pub struct SyncResources<'a> {
-    internal: &'a UnsafeResources,
+    internal: &'a RawResources,
 }
 
 impl<'a> SyncResources<'a> {

@@ -120,7 +120,7 @@ impl<'a, T: Component> View<'a> for TryRead<T> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TryWrite<T>(PhantomData<T>);
+pub struct TryWrite<T>(PhantomData<*const T>);
 impl<T> Default for TryWrite<T> {
     fn default() -> Self {
         TryWrite(PhantomData)

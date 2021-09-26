@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use util::cons::{ConsAppend, ConsFlatten};
 
 use crate::{
-    BoxedStageLabel, CommandBuffer, IntoView, Query, Read, Resource, ResourceSet, StageLabel,
-    UnsafeResources, World, Write,
+    BoxedStageLabel, CommandBuffer, IntoView, Query, RawResources, Read, Resource, ResourceSet,
+    StageLabel, World, Write,
 };
 
 use super::executor::Runnable;
@@ -92,9 +92,9 @@ where
         self.stage.clone()
     }
 
-    unsafe fn run_unsafe(&mut self, world: &World, resources: &UnsafeResources) {
-        let resources_static = &*(resources as *const UnsafeResources);
-        let mut resources = R::fetch_unchecked(resources_static);
+    unsafe fn run_unsafe(&mut self, world: &World, resources: &RawResources) {
+        let resources_static = &*(resources as *const RawResources);
+        let mut resources = R::fetch(resources_static);
 
         let queries = &mut self.queries;
         let command = self.command_buffer.get_or_insert(CommandBuffer::new());

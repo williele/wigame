@@ -2,13 +2,13 @@ use std::cell::UnsafeCell;
 
 use util::downcast_rs::{impl_downcast, Downcast};
 
-use crate::{BoxedStageLabel, CommandBuffer, Resources, UnsafeResources, World};
+use crate::{BoxedStageLabel, CommandBuffer, RawResources, Resources, World};
 
 pub trait ParRunnable: Runnable + Send + Sync {}
 impl<T: Runnable + Send + Sync> ParRunnable for T {}
 
 pub trait Runnable {
-    unsafe fn run_unsafe(&mut self, world: &World, resources: &UnsafeResources);
+    unsafe fn run_unsafe(&mut self, world: &World, resources: &RawResources);
 
     fn command_buffer_mut(&mut self) -> Option<&mut CommandBuffer>;
 
@@ -35,12 +35,7 @@ impl SystemBox {
 
 pub(crate) trait Executor: Downcast + Send + Sync {
     fn cache_data(&mut self, systems: &[SystemBox]);
-    fn run_systems(
-        &mut self,
-        systems: &[SystemBox],
-        world: &mut World,
-        resources: &UnsafeResources,
-    );
+    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World, resources: &RawResources);
 }
 impl_downcast!(Executor);
 
@@ -50,12 +45,7 @@ pub struct SequenceExecutor {}
 impl Executor for SequenceExecutor {
     fn cache_data(&mut self, _systems: &[SystemBox]) {}
 
-    fn run_systems(
-        &mut self,
-        systems: &[SystemBox],
-        world: &mut World,
-        resources: &UnsafeResources,
-    ) {
+    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World, resources: &RawResources) {
         for system in systems {
             let borrow = unsafe { system.get_mut() };
             unsafe { borrow.run_unsafe(world, resources) }
@@ -71,12 +61,7 @@ pub struct SequenceOnceExecutor {
 impl Executor for SequenceOnceExecutor {
     fn cache_data(&mut self, _systems: &[SystemBox]) {}
 
-    fn run_systems(
-        &mut self,
-        systems: &[SystemBox],
-        world: &mut World,
-        resources: &UnsafeResources,
-    ) {
+    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World, resources: &RawResources) {
         if self.ran {
             return;
         }

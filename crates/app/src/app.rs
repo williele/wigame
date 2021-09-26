@@ -1,4 +1,6 @@
-use crate::{ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World};
+use crate::{
+    update_event_sys, Events, ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World,
+};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum AppStage {
@@ -67,6 +69,11 @@ impl App {
     pub fn add_resource<R: Resource>(&mut self, resource: R) -> &mut Self {
         self.resources.insert(resource);
         self
+    }
+
+    pub fn add_event<T: 'static>(&mut self) -> &mut Self {
+        self.add_resource(Events::<T>::default())
+            .add_system_to_stage(AppStage::Begin, update_event_sys::<T>())
     }
 
     pub fn add_stage(&mut self, label: impl StageLabel, stage: Stage) -> &mut Self {

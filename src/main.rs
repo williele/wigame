@@ -1,4 +1,4 @@
-use app::{App, AppStage, ParRunnable, Query, SystemBuilder};
+use app::{App, AppStage, EventReader, Events, ParRunnable, Query, SystemBuilder};
 
 #[derive(Debug)]
 struct Foo(i32);
@@ -14,12 +14,16 @@ struct DemoResource {
     message: String,
 }
 
+struct AppExitEvent;
+
 fn foo_sys() -> impl ParRunnable {
     let a = SystemBuilder::new()
         .on_stage(AppStage::Startup)
         .write_resource::<DemoResource>()
-        .build(|world, cmd, demo_resource, _| {
+        .write_resource::<Events<AppExitEvent>>()
+        .build(|world, cmd, (demo_resource, app_exit_events), _| {
             demo_resource.message = "another message".to_string();
+            app_exit_events.send(AppExitEvent);
 
             cmd.spawn(world).add(Foo(0)).add(Bar(0));
             cmd.spawn(world).add(Foo(1));
@@ -29,11 +33,17 @@ fn foo_sys() -> impl ParRunnable {
 }
 
 fn bar_sys() -> impl ParRunnable {
+    let mut app_exit_reader = EventReader::<AppExitEvent>::default();
+
     SystemBuilder::new()
         .with_query(Query::<(&Foo, Option<&Bar>)>::new())
         .read_resource::<DemoResource>()
-        .build(|world, _, demo_resource, query| {
+        .read_resource::<Events<AppExitEvent>>()
+        .build(move |world, _, (demo_resource, app_exit_events), query| {
             println!("{:?}", demo_resource);
+            for _ in app_exit_reader.iter(app_exit_events) {
+                println!("ask for exit");
+            }
 
             query
                 .iter(world)
@@ -47,6 +57,7 @@ fn main() {
         .add_resource(DemoResource {
             message: "this is awesome".to_string(),
         })
+        .add_event::<AppExitEvent>()
         .add_system(foo_sys())
         .add_system(bar_sys())
         .run();
