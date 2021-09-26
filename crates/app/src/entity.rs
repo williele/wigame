@@ -1,5 +1,4 @@
 use std::{
-    any::TypeId,
     collections::HashSet,
     convert::TryFrom,
     fmt::Debug,
@@ -8,7 +7,7 @@ use std::{
 
 use util::{bit_set::BitSet, sparse_set::SparseIndex};
 
-use crate::Component;
+use crate::{Component, ComponentTypeId};
 
 #[derive(Clone, Copy)]
 pub struct Entity {
@@ -42,7 +41,7 @@ impl SparseIndex for Entity {
 pub(crate) struct EntityEntry {
     is_live: bool,
     generation: u32,
-    components: Option<HashSet<TypeId>>,
+    components: Option<HashSet<ComponentTypeId>>,
 }
 
 #[derive(Default)]
@@ -78,7 +77,7 @@ impl EntityAllocator {
             let components = self.entries[index]
                 .components
                 .get_or_insert(Default::default());
-            components.insert(TypeId::of::<T>());
+            components.insert(ComponentTypeId::of::<T>());
         }
     }
 
@@ -86,7 +85,7 @@ impl EntityAllocator {
         if self.is_live(entity) {
             let index = entity.id as usize;
             if let Some(components) = &mut self.entries[index].components {
-                components.remove(&TypeId::of::<T>());
+                components.remove(&ComponentTypeId::of::<T>());
             }
         }
     }
@@ -162,7 +161,7 @@ impl EntityAllocator {
         }
     }
 
-    pub(crate) fn delloc(&mut self, entity: Entity) -> Option<HashSet<TypeId>> {
+    pub(crate) fn delloc(&mut self, entity: Entity) -> Option<HashSet<ComponentTypeId>> {
         if self.is_live(entity) {
             let entry = &mut self.entries[entity.id as usize];
             entry.is_live = false;

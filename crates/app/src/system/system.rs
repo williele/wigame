@@ -3,37 +3,11 @@ use std::marker::PhantomData;
 use util::cons::{ConsAppend, ConsFlatten};
 
 use crate::{
-    BoxedStageLabel, CommandBuffer, IntoView, Query, RawResources, Read, Resource, ResourceSet,
-    StageLabel, World, Write,
+    BoxedStageLabel, CommandBuffer, IntoView, Query, QuerySet, RawResources, Read, Resource,
+    ResourceSet, StageLabel, World, Write,
 };
 
 use super::executor::Runnable;
-
-pub trait QuerySet: Send + Sync {}
-
-macro_rules! impl_queryset_tuple {
-    ($($name: ident),*) => {
-        impl<$($name,)*> QuerySet for ($($name,)*)
-        where
-            $($name: QuerySet,)*
-        {}
-    };
-}
-
-macro_rules! queryset_tuple {
-    ($head_ty:ident) => {
-        impl_queryset_tuple!($head_ty);
-    };
-    ($head_ty:ident, $( $tail_ty:ident ),*) => (
-        impl_queryset_tuple!($head_ty, $($tail_ty),*);
-        queryset_tuple!($($tail_ty),*);
-    );
-}
-
-queryset_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
-
-impl QuerySet for () {}
-impl<V> QuerySet for Query<V> where V: IntoView + Send + Sync {}
 
 pub trait SystemFn<R, Q>
 where
