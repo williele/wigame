@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{system::stage::Stage, BoxedStageLabel, ParRunnable, StageLabel, World};
+use crate::{system::stage::Stage, BoxedStageLabel, ParRunnable, Resources, StageLabel, World};
 
 #[derive(Default)]
 pub struct Schedule {
@@ -95,10 +95,10 @@ impl Schedule {
         self
     }
 
-    pub fn run(&mut self, world: &mut World) {
+    pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
         for label in self.stage_order.iter() {
             let stage = self.stages.get_mut(label).unwrap();
-            stage.run(world);
+            stage.run(world, resources);
         }
     }
 }
@@ -115,7 +115,7 @@ mod tests {
     struct Bar(i32);
 
     fn startup() -> impl ParRunnable {
-        SystemBuilder::new().build(|world, cmd, _| {
+        SystemBuilder::new().build(|world, cmd, _, _| {
             println!("startup: spawn entity");
             cmd.spawn(world).add(Foo(0)).add(Bar(0));
             cmd.spawn(world).add(Foo(1));
@@ -126,7 +126,7 @@ mod tests {
     fn first1() -> impl ParRunnable {
         SystemBuilder::new()
             .with_query(Query::<(&mut Foo, &Bar)>::new())
-            .build(|world, _, query| {
+            .build(|world, _, _, query| {
                 println!("first 1: update entity");
                 query
                     .iter(world)
@@ -138,7 +138,7 @@ mod tests {
     fn first2() -> impl ParRunnable {
         SystemBuilder::new()
             .with_query(Query::<(&Foo, &Bar)>::new())
-            .build(|world, _, query| {
+            .build(|world, _, _, query| {
                 println!("first 2: print foo and bar");
                 query
                     .iter(world)
@@ -150,7 +150,7 @@ mod tests {
     fn second() -> impl ParRunnable {
         SystemBuilder::new()
             .with_query(Query::<(Entities, &Foo, Option<&Bar>)>::new())
-            .build(|world, cmd, query| {
+            .build(|world, cmd, _, query| {
                 println!("second: despawn none bar");
                 query.iter(world).into_iter().for_each(|(ent, _, bar)| {
                     if bar.is_none() {
@@ -164,7 +164,7 @@ mod tests {
     fn third() -> impl ParRunnable {
         SystemBuilder::new()
             .with_query(Query::<(&Foo, Option<&Bar>)>::new())
-            .build(|world, _, query| {
+            .build(|world, _, _, query| {
                 println!("third: print foo and bar");
                 query
                     .iter(world)
@@ -176,6 +176,7 @@ mod tests {
     #[test]
     fn schedule() {
         let mut world = World::default();
+        let mut resources = Resources::default();
         let mut schedule = Schedule::default();
 
         schedule.add_stage("startup", Stage::sequence());
@@ -189,6 +190,6 @@ mod tests {
         schedule.add_system_to_stage("second", second());
         schedule.add_system_to_stage("third", third());
 
-        schedule.run(&mut world);
+        schedule.run(&mut world, &mut resources);
     }
 }

@@ -2,22 +2,20 @@ use std::cell::UnsafeCell;
 
 use util::downcast_rs::{impl_downcast, Downcast};
 
-use crate::{BoxedStageLabel, CommandBuffer, World};
+use crate::{BoxedStageLabel, CommandBuffer, Resources, UnsafeResources, World};
 
 pub trait ParRunnable: Runnable + Send + Sync {}
 impl<T: Runnable + Send + Sync> ParRunnable for T {}
 
 pub trait Runnable {
-    unsafe fn run_unsafe(&mut self, world: &World);
+    unsafe fn run_unsafe(&mut self, world: &World, resources: &UnsafeResources);
 
     fn command_buffer_mut(&mut self) -> Option<&mut CommandBuffer>;
 
     fn stage(&self) -> Option<BoxedStageLabel>;
 
-    fn run(&mut self, world: &World) {
-        unsafe {
-            self.run_unsafe(world);
-        }
+    fn run(&mut self, world: &World, resources: &mut Resources) {
+        unsafe { self.run_unsafe(world, resources.internal()) }
     }
 }
 
@@ -37,7 +35,12 @@ impl SystemBox {
 
 pub(crate) trait Executor: Downcast + Send + Sync {
     fn cache_data(&mut self, systems: &[SystemBox]);
-    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World);
+    fn run_systems(
+        &mut self,
+        systems: &[SystemBox],
+        world: &mut World,
+        resources: &UnsafeResources,
+    );
 }
 impl_downcast!(Executor);
 
@@ -47,10 +50,15 @@ pub struct SequenceExecutor {}
 impl Executor for SequenceExecutor {
     fn cache_data(&mut self, _systems: &[SystemBox]) {}
 
-    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World) {
+    fn run_systems(
+        &mut self,
+        systems: &[SystemBox],
+        world: &mut World,
+        resources: &UnsafeResources,
+    ) {
         for system in systems {
             let borrow = unsafe { system.get_mut() };
-            unsafe { borrow.run_unsafe(world) }
+            unsafe { borrow.run_unsafe(world, resources) }
         }
     }
 }
@@ -63,14 +71,19 @@ pub struct SequenceOnceExecutor {
 impl Executor for SequenceOnceExecutor {
     fn cache_data(&mut self, _systems: &[SystemBox]) {}
 
-    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World) {
+    fn run_systems(
+        &mut self,
+        systems: &[SystemBox],
+        world: &mut World,
+        resources: &UnsafeResources,
+    ) {
         if self.ran {
             return;
         }
 
         for system in systems {
             let borrow = unsafe { system.get_mut() };
-            unsafe { borrow.run_unsafe(world) }
+            unsafe { borrow.run_unsafe(world, resources) }
         }
         self.ran = true;
     }

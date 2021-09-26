@@ -15,8 +15,13 @@ pub trait View<'a>: Sized {
     fn fetch(entity: Entity, components: &Components) -> Self::Item;
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Read<T>(PhantomData<T>);
+#[derive(Debug, Clone, Copy)]
+pub struct Read<T>(PhantomData<*const T>);
+impl<T> Default for Read<T> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
 
 unsafe impl<T> Send for Read<T> {}
 unsafe impl<T> Sync for Read<T> {}
@@ -45,8 +50,13 @@ impl<'a, T: Component> View<'a> for Read<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Write<T>(PhantomData<T>);
+#[derive(Debug, Clone, Copy)]
+pub struct Write<T>(PhantomData<*const T>);
+impl<T> Default for Write<T> {
+    fn default() -> Self {
+        Write(PhantomData)
+    }
+}
 
 unsafe impl<T> Send for Write<T> {}
 unsafe impl<T> Sync for Write<T> {}
@@ -75,8 +85,13 @@ impl<'a, T: Component> View<'a> for Write<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct TryRead<T>(PhantomData<T>);
+#[derive(Debug, Clone, Copy)]
+pub struct TryRead<T>(PhantomData<*const T>);
+impl<T> Default for TryRead<T> {
+    fn default() -> Self {
+        TryRead(PhantomData)
+    }
+}
 
 unsafe impl<T> Send for TryRead<T> {}
 unsafe impl<T> Sync for TryRead<T> {}
@@ -104,8 +119,13 @@ impl<'a, T: Component> View<'a> for TryRead<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct TryWrite<T>(PhantomData<T>);
+impl<T> Default for TryWrite<T> {
+    fn default() -> Self {
+        TryWrite(PhantomData)
+    }
+}
 
 unsafe impl<T> Send for TryWrite<T> {}
 unsafe impl<T> Sync for TryWrite<T> {}

@@ -1,4 +1,6 @@
-use crate::{Executor, ParRunnable, SequenceExecutor, SequenceOnceExecutor, SystemBox, World};
+use crate::{
+    Executor, ParRunnable, Resources, SequenceExecutor, SequenceOnceExecutor, SystemBox, World,
+};
 
 pub struct Stage {
     executor: Box<dyn Executor>,
@@ -29,12 +31,13 @@ impl Stage {
         self
     }
 
-    pub fn run(&mut self, world: &mut World) {
+    pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
         if self.modified {
             self.modified = true;
             self.executor.cache_data(&self.systems);
         }
-        self.executor.run_systems(&self.systems, world);
+        self.executor
+            .run_systems(&self.systems, world, resources.internal());
         self.systems.iter_mut().for_each(|system| {
             let borrow = unsafe { system.get_mut() };
             if let Some(cmd) = borrow.command_buffer_mut() {

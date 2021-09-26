@@ -1,4 +1,4 @@
-use crate::{ParRunnable, Schedule, Stage, StageLabel, World};
+use crate::{ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum AppStage {
@@ -29,6 +29,7 @@ pub trait Plugin {
 pub struct App {
     world: World,
     schedule: Schedule,
+    resources: Resources,
     runner: Box<dyn Fn(App)>,
 }
 
@@ -36,6 +37,7 @@ impl Default for App {
     fn default() -> Self {
         App {
             world: Default::default(),
+            resources: Default::default(),
             schedule: Default::default(),
             runner: Box::new(run_once),
         }
@@ -59,6 +61,11 @@ impl App {
         P: Plugin,
     {
         plugin.build(self);
+        self
+    }
+
+    pub fn add_resource<R: Resource>(&mut self, resource: R) -> &mut Self {
+        self.resources.insert(resource);
         self
     }
 
@@ -105,7 +112,7 @@ impl App {
     }
 
     pub fn update(&mut self) {
-        self.schedule.run(&mut self.world);
+        self.schedule.run(&mut self.world, &mut self.resources);
     }
 
     pub fn run(&mut self) {
