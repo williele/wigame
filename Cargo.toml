@@ -2,13 +2,16 @@
 name = "wigame"
 version = "0.1.0"
 edition = "2018"
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["crates/app", "crates/util"]
+members = ["crates/app", "crates/util", "crates/window", "crates/render"]
 
 [dependencies]
 app = { path = "./crates/app" }
+render = { path = "./crates/render" }
+window_plugin = { package = "window", path = "./crates/window" }
 rayon = "1.5.1"
 rand = "0.8.4"

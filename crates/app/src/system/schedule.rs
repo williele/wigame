@@ -38,7 +38,7 @@ impl Schedule {
     ) -> &mut Self {
         let label: Box<dyn StageLabel> = Box::new(label);
         let target_index = self
-            .get_stage_index(&target)
+            .get_stage_index(target.dyn_clone().as_ref())
             .unwrap_or_else(|| panic!("Target stage does not exist: {:?}.", target));
         self.stage_order.insert(target_index + 1, label.clone());
         if self.stages.insert(label.clone(), stage).is_some() {
@@ -55,7 +55,7 @@ impl Schedule {
     ) -> &mut Self {
         let label: Box<dyn StageLabel> = Box::new(label);
         let target_index = self
-            .get_stage_index(&target)
+            .get_stage_index(target.dyn_clone().as_ref())
             .unwrap_or_else(|| panic!("Target stage does not exist: {:?}.", target));
         self.stage_order.insert(target_index, label.clone());
         if self.stages.insert(label.clone(), stage).is_some() {

@@ -24,14 +24,17 @@ impl StageLabel for AppStage {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AppExit;
+
 pub trait Plugin {
     fn build(&mut self, app: &mut App);
 }
 
 pub struct App {
-    world: World,
-    schedule: Schedule,
-    resources: Resources,
+    pub world: World,
+    pub schedule: Schedule,
+    pub resources: Resources,
     runner: Box<dyn Fn(App)>,
 }
 
@@ -54,7 +57,8 @@ impl App {
             .add_stage(AppStage::PreUpdate, Stage::sequence())
             .add_stage(AppStage::Update, Stage::sequence())
             .add_stage(AppStage::PostUpdate, Stage::sequence())
-            .add_stage(AppStage::End, Stage::sequence());
+            .add_stage(AppStage::End, Stage::sequence())
+            .add_event::<AppExit>();
         app
     }
 
@@ -81,18 +85,22 @@ impl App {
         self
     }
 
-    pub fn add_stage_before<L>(&mut self, target: L, label: L, stage: Stage) -> &mut Self
-    where
-        L: StageLabel,
-    {
+    pub fn add_stage_before(
+        &mut self,
+        target: impl StageLabel,
+        label: impl StageLabel,
+        stage: Stage,
+    ) -> &mut Self {
         self.schedule.add_stage_before(target, label, stage);
         self
     }
 
-    pub fn add_stage_after<L>(&mut self, target: L, label: L, stage: Stage) -> &mut Self
-    where
-        L: StageLabel,
-    {
+    pub fn add_stage_after(
+        &mut self,
+        target: impl StageLabel,
+        label: impl StageLabel,
+        stage: Stage,
+    ) -> &mut Self {
         self.schedule.add_stage_after(target, label, stage);
         self
     }
@@ -109,12 +117,16 @@ impl App {
         self
     }
 
-    pub fn add_system_to_stage<L, S>(&mut self, label: L, system: S) -> &mut Self
+    pub fn add_system_to_stage<S>(&mut self, label: impl StageLabel, system: S) -> &mut Self
     where
-        L: StageLabel,
         S: ParRunnable + 'static,
     {
         self.schedule.add_system_to_stage(label, system);
+        self
+    }
+
+    pub fn set_runner(&mut self, run_fn: impl Fn(App) + 'static) -> &mut Self {
+        self.runner = Box::new(run_fn);
         self
     }
 
