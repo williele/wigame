@@ -64,14 +64,33 @@ impl Schedule {
         self
     }
 
-    pub fn add_system_to_stage<S: ParRunnable + 'static>(
-        &mut self,
-        stage_label: impl StageLabel,
-        system: S,
-    ) -> &mut Self {
+    pub fn add_system<S>(&mut self, system: S) -> &mut Self
+    where
+        S: ParRunnable + 'static,
+    {
+        let label = system
+            .stage()
+            .expect("Cannot add system with unknown stage");
+        self.add_system_to_stage_inner(label.as_ref(), system);
+        self
+    }
+
+    pub fn add_system_to_stage<S>(&mut self, label: impl StageLabel, system: S) -> &mut Self
+    where
+        S: ParRunnable + 'static,
+    {
+        let label = label.dyn_clone();
+        self.add_system_to_stage_inner(label.as_ref(), system);
+        self
+    }
+
+    fn add_system_to_stage_inner<S>(&mut self, label: &dyn StageLabel, system: S) -> &mut Self
+    where
+        S: ParRunnable + 'static,
+    {
         let stage = self
-            .get_stage_mut(&stage_label)
-            .unwrap_or_else(move || panic!("Stage '{:?}' does not exist", stage_label));
+            .get_stage_mut(label)
+            .unwrap_or_else(move || panic!("Stage '{:?}' does not exist", label));
         stage.add_system(system);
         self
     }

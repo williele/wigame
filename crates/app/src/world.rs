@@ -9,27 +9,38 @@ pub struct World {
     entity_allocator: EntityAllocator,
 }
 
-pub struct WorldExt<'a> {
-    components: &'a mut Components,
+pub struct WorldEntityEditor<'a> {
+    world: &'a mut World,
     entity: Entity,
 }
 
-impl<'a> WorldExt<'a> {
-    pub fn with<C: Component>(&mut self, component: C) -> &mut Self {
-        self.components.insert(self.entity, component);
+impl<'a> WorldEntityEditor<'a> {
+    pub fn add<T: Component>(&mut self, component: T) -> &mut Self {
+        self.world.add_component(self.entity, component);
         self
     }
 
-    pub fn build(&mut self) -> Entity {
+    pub fn remove<T: Component>(&mut self) -> &mut Self {
+        self.world.remove_commponent::<T>(self.entity);
+        self
+    }
+
+    pub fn despawn(&mut self) -> Entity {
+        self.world.despawn(self.entity);
+        self.entity
+    }
+
+    pub fn entity(&mut self) -> Entity {
         self.entity
     }
 }
 
 impl World {
-    pub fn spawn(&mut self) -> WorldExt {
-        WorldExt {
-            components: &mut self.components,
-            entity: self.entity_allocator.alloc(),
+    pub fn spawn(&mut self) -> WorldEntityEditor {
+        let entity = self.entity_allocator.alloc();
+        WorldEntityEditor {
+            world: self,
+            entity,
         }
     }
 
@@ -41,17 +52,17 @@ impl World {
         }
     }
 
-    pub fn add_component<C: Component>(&mut self, entity: Entity, component: C) {
+    pub fn add_component<T: Component>(&mut self, entity: Entity, component: T) {
         if self.entity_allocator.is_live(entity) {
             self.components.insert(entity, component);
-            self.entity_allocator.add_component::<C>(entity);
+            self.entity_allocator.add_component::<T>(entity);
         }
     }
 
-    pub fn remove_commponent<C: Component>(&mut self, entity: Entity) {
+    pub fn remove_commponent<T: Component>(&mut self, entity: Entity) {
         if self.entity_allocator.is_live(entity) {
-            self.components.remove::<C>(entity);
-            self.entity_allocator.remove_commponent::<C>(entity);
+            self.components.remove::<T>(entity);
+            self.entity_allocator.remove_commponent::<T>(entity);
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::{Executor, ParRunnable, SequenceExecutor, SystemBox, World};
+use crate::{Executor, ParRunnable, SequenceExecutor, SequenceOnceExecutor, SystemBox, World};
 
 pub struct Stage {
     executor: Box<dyn Executor>,
@@ -17,6 +17,10 @@ impl Stage {
 
     pub fn sequence() -> Self {
         Stage::new(SequenceExecutor::default())
+    }
+
+    pub fn sequence_once() -> Self {
+        Stage::new(SequenceOnceExecutor::default())
     }
 
     pub fn add_system<S: ParRunnable + 'static>(&mut self, system: S) -> &mut Self {

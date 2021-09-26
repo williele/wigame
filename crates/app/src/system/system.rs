@@ -1,6 +1,6 @@
 use util::cons::{ConsAppend, ConsFlatten};
 
-use crate::{CommandBuffer, IntoView, Query, World};
+use crate::{BoxedStageLabel, CommandBuffer, IntoView, Query, StageLabel, World};
 
 use super::executor::Runnable;
 
@@ -46,6 +46,7 @@ where
 
 pub struct System<Q, F> {
     queries: Q,
+    stage: Option<BoxedStageLabel>,
     run_fn: F,
     command_buffer: Option<CommandBuffer>,
 }
@@ -59,6 +60,10 @@ where
         self.command_buffer.as_mut()
     }
 
+    fn stage(&self) -> Option<BoxedStageLabel> {
+        self.stage.clone()
+    }
+
     unsafe fn run_unsafe(&mut self, world: &crate::World) {
         let queries = &mut self.queries;
         let command = self.command_buffer.get_or_insert(CommandBuffer::new());
@@ -68,14 +73,17 @@ where
     }
 }
 
-#[derive(Default)]
 pub struct SystemBuilder<Q = ()> {
     queries: Q,
+    stage: Option<BoxedStageLabel>,
 }
 
 impl SystemBuilder<()> {
     pub fn new() -> Self {
-        SystemBuilder::default()
+        SystemBuilder {
+            queries: (),
+            stage: None,
+        }
     }
 }
 
@@ -83,6 +91,16 @@ impl<Q> SystemBuilder<Q>
 where
     Q: 'static + Send + ConsFlatten,
 {
+    pub fn on_stage<L>(self, label: L) -> SystemBuilder<Q>
+    where
+        L: StageLabel,
+    {
+        SystemBuilder {
+            queries: self.queries,
+            stage: Some(label.dyn_clone()),
+        }
+    }
+
     pub fn with_query<V>(
         self,
         query: Query<V>,
@@ -93,6 +111,7 @@ where
     {
         SystemBuilder {
             queries: ConsAppend::append(self.queries, query),
+            stage: self.stage,
         }
     }
 
@@ -102,6 +121,7 @@ where
     {
         System {
             queries: self.queries.flatten(),
+            stage: self.stage,
             run_fn,
             command_buffer: None,
         }

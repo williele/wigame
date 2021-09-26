@@ -43,10 +43,9 @@ mod tests {
     #[test]
     fn query() {
         let mut world = World::default();
-        world.spawn().with(Foo(0)).with(Bar(0)).build();
-        world.spawn().with(Foo(1)).build();
-        world.spawn().with(Foo(2)).with(Bar(2)).build();
-        world.flush();
+        world.spawn().add(Foo(0)).add(Bar(0));
+        world.spawn().add(Foo(1));
+        world.spawn().add(Foo(2)).add(Bar(2));
 
         for foo in Query::<Write<Foo>>::new().iter(&world) {
             foo.0 += 1;

@@ -2,7 +2,7 @@ use std::cell::UnsafeCell;
 
 use util::downcast_rs::{impl_downcast, Downcast};
 
-use crate::{CommandBuffer, World};
+use crate::{BoxedStageLabel, CommandBuffer, World};
 
 pub trait ParRunnable: Runnable + Send + Sync {}
 impl<T: Runnable + Send + Sync> ParRunnable for T {}
@@ -11,6 +11,8 @@ pub trait Runnable {
     unsafe fn run_unsafe(&mut self, world: &World);
 
     fn command_buffer_mut(&mut self) -> Option<&mut CommandBuffer>;
+
+    fn stage(&self) -> Option<BoxedStageLabel>;
 
     fn run(&mut self, world: &World) {
         unsafe {
@@ -50,5 +52,26 @@ impl Executor for SequenceExecutor {
             let borrow = unsafe { system.get_mut() };
             unsafe { borrow.run_unsafe(world) }
         }
+    }
+}
+
+#[derive(Default)]
+pub struct SequenceOnceExecutor {
+    ran: bool,
+}
+
+impl Executor for SequenceOnceExecutor {
+    fn cache_data(&mut self, _systems: &[SystemBox]) {}
+
+    fn run_systems(&mut self, systems: &[SystemBox], world: &mut World) {
+        if self.ran {
+            return;
+        }
+
+        for system in systems {
+            let borrow = unsafe { system.get_mut() };
+            unsafe { borrow.run_unsafe(world) }
+        }
+        self.ran = true;
     }
 }
