@@ -31,7 +31,7 @@ impl<T> Default for Events<T> {
     }
 }
 
-impl<T> Events<T> {
+impl<T: 'static> Events<T> {
     pub fn send(&mut self, event: T) {
         match self.state {
             State::A => self.events_a.push(event),
@@ -50,9 +50,16 @@ impl<T> Events<T> {
             State::B => {
                 self.events_a.clear();
                 self.state = State::A;
-                self.start_b = self.count;
+                self.start_a = self.count;
             }
         }
+    }
+
+    pub(crate) fn update_sys() -> impl ParRunnable {
+        SystemBuilder::new()
+            .on_stage(AppStage::Begin)
+            .write_resource::<Events<T>>()
+            .build(|_, _, events, _| events.update())
     }
 
     pub fn drain(&mut self) -> impl Iterator<Item = T> + '_ {
@@ -82,13 +89,6 @@ impl<T> Events<T> {
     }
 }
 
-pub(crate) fn update_event_sys<T: 'static>() -> impl ParRunnable {
-    SystemBuilder::new()
-        .on_stage(AppStage::Begin)
-        .write_resource::<Events<T>>()
-        .build(|_, _, events, _| events.update())
-}
-
 impl<T> std::iter::Extend<T> for Events<T> {
     fn extend<I>(&mut self, iter: I)
     where
@@ -109,14 +109,14 @@ impl<T> std::iter::Extend<T> for Events<T> {
 }
 
 pub struct EventReader<T> {
-    count: usize,
+    last_count: usize,
     _marker: PhantomData<T>,
 }
 
 impl<T> Default for EventReader<T> {
     fn default() -> Self {
         EventReader {
-            count: 0,
+            last_count: 0,
             _marker: PhantomData,
         }
     }
@@ -124,17 +124,17 @@ impl<T> Default for EventReader<T> {
 
 impl<T> EventReader<T> {
     pub fn iter<'a>(&mut self, events: &'a Events<T>) -> impl DoubleEndedIterator<Item = &'a T> {
-        let a_index = if self.count > events.start_a {
-            self.count - events.start_a
+        let a_index = if self.last_count > events.start_a {
+            self.last_count - events.start_a
         } else {
             0
         };
-        let b_index = if self.count > events.start_b {
-            self.count - events.start_b
+        let b_index = if self.last_count > events.start_b {
+            self.last_count - events.start_b
         } else {
             0
         };
-        self.count = events.count;
+        self.last_count = events.count;
         match events.state {
             State::A => events
                 .events_b

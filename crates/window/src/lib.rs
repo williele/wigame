@@ -37,6 +37,7 @@ impl Plugin for WindowPlugin {
             .add_event::<WindowCloseRequest>()
             .add_event::<WindowClosed>()
             .add_event::<WindowResized>()
+            .add_event::<WindowKeyboardInput>()
             .add_system(handle_window_event_sys())
             .set_runner(window_runner);
 

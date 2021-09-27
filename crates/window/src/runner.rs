@@ -5,7 +5,8 @@ use winit::{
 };
 
 use crate::{
-    manager::WindowManager, WindowCloseRequest, WindowCreateRequest, WindowCreated, WindowResized,
+    manager::WindowManager, WindowCloseRequest, WindowClosed, WindowCreateRequest, WindowCreated,
+    WindowKeyboardInput, WindowResized,
 };
 
 pub fn window_runner(mut app: App) {
@@ -40,17 +41,15 @@ pub fn window_runner(mut app: App) {
                         .get_mut::<Events<WindowCloseRequest>>()
                         .unwrap()
                         .send(WindowCloseRequest { id: window_id }),
-                    event::WindowEvent::Resized(size) => {
-                        println!("resized {:?}", size);
-                        app.resources
-                            .get_mut::<Events<WindowResized>>()
-                            .unwrap()
-                            .send(WindowResized {
-                                id: window_id,
-                                width: size.width,
-                                height: size.height,
-                            })
-                    }
+                    event::WindowEvent::Resized(size) => app
+                        .resources
+                        .get_mut::<Events<WindowResized>>()
+                        .unwrap()
+                        .send(WindowResized {
+                            id: window_id,
+                            width: size.width,
+                            height: size.height,
+                        }),
                     event::WindowEvent::ScaleFactorChanged { new_inner_size, .. } => app
                         .resources
                         .get_mut::<Events<WindowResized>>()
@@ -59,6 +58,15 @@ pub fn window_runner(mut app: App) {
                             id: window_id,
                             width: new_inner_size.width,
                             height: new_inner_size.height,
+                        }),
+                    event::WindowEvent::KeyboardInput { ref input, .. } => app
+                        .resources
+                        .get_mut::<Events<WindowKeyboardInput>>()
+                        .unwrap()
+                        .send(WindowKeyboardInput {
+                            key_code: input.virtual_keycode,
+                            scan_code: input.scancode,
+                            state: input.state,
                         }),
                     _ => {}
                 }
@@ -77,7 +85,6 @@ pub fn window_runner(mut app: App) {
                 );
 
                 if active {
-                    println!("update");
                     app.update()
                 }
             }
@@ -110,12 +117,16 @@ pub(crate) fn handle_window_event_sys() -> impl ParRunnable {
         .on_stage(AppStage::Begin)
         .write_resource::<WindowManager>()
         .write_resource::<Events<WindowCloseRequest>>()
+        .write_resource::<Events<WindowClosed>>()
         .write_resource::<Events<AppExit>>()
         .build(
-            move |_, _, (manager, window_close_requests, app_exit_events), _| {
-                for event in window_close_request_reader.iter(&window_close_requests) {
-                    if manager.remove(&event.id).is_some() && manager.len() <= 0 {
-                        app_exit_events.send(AppExit);
+            move |_, _, (manager, close_request, closed_event, app_exit), _| {
+                for event in window_close_request_reader.iter(&close_request) {
+                    if manager.remove(&event.id).is_some() {
+                        closed_event.send(WindowClosed { id: event.id });
+                        if manager.len() <= 0 {
+                            app_exit.send(AppExit);
+                        }
                     }
                 }
             },

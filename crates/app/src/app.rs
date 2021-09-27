@@ -1,6 +1,4 @@
-use crate::{
-    update_event_sys, Events, ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World,
-};
+use crate::{Events, ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum AppStage {
@@ -53,7 +51,7 @@ impl App {
     pub fn new() -> Self {
         let mut app = App::default();
         app.add_stage(AppStage::Begin, Stage::sequence())
-            // .add_stage(AppStage::Startup, Stage::sequence_once())
+            .add_stage(AppStage::Startup, Stage::sequence_once())
             .add_stage(AppStage::PreUpdate, Stage::sequence())
             .add_stage(AppStage::Update, Stage::sequence())
             .add_stage(AppStage::PostUpdate, Stage::sequence())
@@ -77,7 +75,7 @@ impl App {
 
     pub fn add_event<T: 'static>(&mut self) -> &mut Self {
         self.add_resource(Events::<T>::default())
-            .add_system(update_event_sys::<T>())
+            .add_system(Events::<T>::update_sys())
     }
 
     pub fn add_stage(&mut self, label: impl StageLabel, stage: Stage) -> &mut Self {

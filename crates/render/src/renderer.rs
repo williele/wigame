@@ -4,7 +4,7 @@ use app::{EventReader, Events, ParRunnable, SystemBuilder};
 use wgpu::{Surface, SurfaceConfiguration};
 use window_plugin::{
     winit::window::{Window, WindowId},
-    WindowCreated, WindowManager, WindowResized,
+    WindowClosed, WindowCreated, WindowManager, WindowResized,
 };
 
 use crate::RenderStage;
@@ -70,12 +70,15 @@ impl Renderer {
         self.surfaces.insert(window_id, (surface, config));
     }
 
+    pub fn remove_surface(&mut self, window_id: &WindowId) {
+        self.surfaces.remove(window_id);
+    }
+
     pub fn resize(&mut self, window_id: &WindowId, width: u32, height: u32) {
         if width > 0 && height > 0 {
             if let Some((surface, config)) = self.surfaces.get_mut(window_id) {
                 config.width = width;
                 config.height = height;
-                println!("{:?}", config);
                 surface.configure(&self.device, &config);
             }
         }
@@ -87,8 +90,7 @@ impl Renderer {
                 Ok(_) => {}
                 Err(wgpu::SurfaceError::Lost) => surface.configure(&self.device, &config),
                 Err(wgpu::SurfaceError::OutOfMemory) => println!("Out of memory"),
-                // Err(err) => eprintln!("Render error: {:?}", err),
-                Err(_) => {}
+                Err(err) => eprintln!("Render error: {:?}", err),
             }
         }
     }
@@ -154,6 +156,20 @@ pub(crate) fn handle_window_created_sys() -> impl ParRunnable {
         })
 }
 
+pub(crate) fn handle_window_closed_sys() -> impl ParRunnable {
+    let mut event_reader = EventReader::<WindowClosed>::default();
+
+    SystemBuilder::new()
+        .on_stage(RenderStage::PostRender)
+        .write_resource::<Renderer>()
+        .read_resource::<Events<WindowClosed>>()
+        .build(move |_, _, (renderer, window_closed_events), _| {
+            for event in event_reader.iter(window_closed_events) {
+                renderer.remove_surface(&event.id);
+            }
+        })
+}
+
 pub(crate) fn handle_window_resized_sys() -> impl ParRunnable {
     let mut event_reader = EventReader::<WindowResized>::default();
 
@@ -163,7 +179,6 @@ pub(crate) fn handle_window_resized_sys() -> impl ParRunnable {
         .read_resource::<Events<WindowResized>>()
         .build(move |_, _, (renderer, events), _| {
             if let Some(event) = event_reader.iter(events).last() {
-                println!("{:?}", event);
                 renderer.resize(&event.id, event.width, event.height);
             }
         })
