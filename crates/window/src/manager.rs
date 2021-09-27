@@ -8,12 +8,32 @@ use winit::{
 
 use crate::WindowDescriptor;
 
+// #[derive(Debug, Clone)]
+// pub enum WindowEvent {
+//     // Command
+//     Create(WindowDescriptor),
+//     Close(WindowId),
+//     // Events
+//     Launched(WindowId),
+//     Resized {
+//         id: WindowId,
+//         width: u32,
+//         height: u32,
+//     },
+//     CloseRequested(WindowId),
+// }
+
 #[derive(Default)]
 pub struct WindowManager {
     windows: HashMap<WindowId, Window>,
 }
 
 impl WindowManager {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.windows.len()
+    }
+
     pub fn create(
         &mut self,
         event_loop: &EventLoopWindowTarget<()>,
@@ -31,5 +51,9 @@ impl WindowManager {
 
     pub fn get(&self, id: &WindowId) -> Option<&Window> {
         self.windows.get(id)
+    }
+
+    pub fn remove(&mut self, id: &WindowId) -> Option<Window> {
+        self.windows.remove(id)
     }
 }
