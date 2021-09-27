@@ -1,13 +1,13 @@
-mod events;
-mod manager;
+pub mod events;
+pub mod manager;
 mod runner;
 
 use app::{Events, Plugin};
-use manager::WindowManager;
 use runner::{handle_window_event_sys, window_runner};
 
 pub use events::*;
 pub use manager::*;
+pub use winit;
 
 #[derive(Debug, Clone)]
 pub struct WindowDescriptor {

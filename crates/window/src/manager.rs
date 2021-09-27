@@ -8,21 +8,6 @@ use winit::{
 
 use crate::WindowDescriptor;
 
-// #[derive(Debug, Clone)]
-// pub enum WindowEvent {
-//     // Command
-//     Create(WindowDescriptor),
-//     Close(WindowId),
-//     // Events
-//     Launched(WindowId),
-//     Resized {
-//         id: WindowId,
-//         width: u32,
-//         height: u32,
-//     },
-//     CloseRequested(WindowId),
-// }
-
 #[derive(Default)]
 pub struct WindowManager {
     windows: HashMap<WindowId, Window>,

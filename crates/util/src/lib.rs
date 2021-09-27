@@ -8,5 +8,6 @@ pub use atomic_refcell;
 pub use bit_set;
 pub use downcast_rs;
 pub use parking_lot;
+pub use pollster;
 pub use rayon;
 pub use smallvec;

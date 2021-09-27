@@ -11,7 +11,7 @@ members = ["crates/app", "crates/util", "crates/window", "crates/render"]
 
 [dependencies]
 app = { path = "./crates/app" }
-render = { path = "./crates/render" }
+render_plugin = { package = "render", path = "./crates/render" }
 window_plugin = { package = "window", path = "./crates/window" }
 rayon = "1.5.1"
 rand = "0.8.4"

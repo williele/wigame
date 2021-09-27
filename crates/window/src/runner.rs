@@ -25,7 +25,6 @@ pub fn window_runner(mut app: App) {
             .is_some()
         {
             *control_flow = ControlFlow::Exit;
-            return;
         }
 
         match event {
@@ -41,15 +40,17 @@ pub fn window_runner(mut app: App) {
                         .get_mut::<Events<WindowCloseRequest>>()
                         .unwrap()
                         .send(WindowCloseRequest { id: window_id }),
-                    event::WindowEvent::Resized(size) => app
-                        .resources
-                        .get_mut::<Events<WindowResized>>()
-                        .unwrap()
-                        .send(WindowResized {
-                            id: window_id,
-                            width: size.width,
-                            height: size.height,
-                        }),
+                    event::WindowEvent::Resized(size) => {
+                        println!("resized {:?}", size);
+                        app.resources
+                            .get_mut::<Events<WindowResized>>()
+                            .unwrap()
+                            .send(WindowResized {
+                                id: window_id,
+                                width: size.width,
+                                height: size.height,
+                            })
+                    }
                     event::WindowEvent::ScaleFactorChanged { new_inner_size, .. } => app
                         .resources
                         .get_mut::<Events<WindowResized>>()
@@ -74,7 +75,9 @@ pub fn window_runner(mut app: App) {
                     event_loop,
                     &mut window_create_request_reader,
                 );
+
                 if active {
+                    println!("update");
                     app.update()
                 }
             }

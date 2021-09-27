@@ -7,5 +7,6 @@ edition = "2018"
 
 [dependencies]
 app = { path = "../app" }
-winit = "0.25.0"
+util = { path = "../util" }
+window_plugin = { package = "window", path = "../window" }
 wgpu = "0.10.2"

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{ParRunnable, SystemBuilder};
+use crate::{AppStage, ParRunnable, SystemBuilder};
 
 #[derive(Debug)]
 enum State {
@@ -84,6 +84,7 @@ impl<T> Events<T> {
 
 pub(crate) fn update_event_sys<T: 'static>() -> impl ParRunnable {
     SystemBuilder::new()
+        .on_stage(AppStage::Begin)
         .write_resource::<Events<T>>()
         .build(|_, _, events, _| events.update())
 }
