@@ -4,6 +4,7 @@ pub mod blob_vec;
 pub mod cons;
 pub mod sparse_set;
 
+pub use anyhow;
 pub use atomic_refcell;
 pub use bit_set;
 pub use downcast_rs;

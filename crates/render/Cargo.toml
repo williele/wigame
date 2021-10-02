@@ -10,3 +10,5 @@ app = { path = "../app" }
 util = { path = "../util" }
 window_plugin = { package = "window", path = "../window" }
 wgpu = "0.10.2"
+bytemuck = { version = "1.7.2", features = ["derive"] }
+image = "0.23.14"

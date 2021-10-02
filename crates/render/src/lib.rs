@@ -1,4 +1,6 @@
+mod buffer;
 pub mod renderer;
+mod texture;
 
 use app::{AppStage, Plugin, Stage, StageLabel};
 use util::pollster;

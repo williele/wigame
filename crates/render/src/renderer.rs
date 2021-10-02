@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use app::{EventReader, Events, ParRunnable, SystemBuilder};
-use wgpu::{Surface, SurfaceConfiguration};
+use wgpu::{util::DeviceExt, RenderPipeline, Surface, SurfaceConfiguration};
 use window_plugin::{
     winit::window::{Window, WindowId},
     WindowClosed, WindowCreated, WindowManager, WindowResized,
 };
 
-use crate::RenderStage;
+use crate::{buffer::Vertex, texture::Texture, RenderStage};
 
 pub struct Renderer {
     pub instance: wgpu::Instance,
@@ -16,6 +16,11 @@ pub struct Renderer {
     pub queue: wgpu::Queue,
     pub initialized: bool,
     surfaces: HashMap<WindowId, (Surface, SurfaceConfiguration)>,
+    //
+    render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
+    indices_buffer: wgpu::Buffer,
+    bind_group: wgpu::BindGroup,
 }
 
 impl Renderer {
@@ -40,6 +45,132 @@ impl Renderer {
             .await
             .unwrap();
 
+        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        });
+
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: None,
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler {
+                            comparison: false,
+                            filtering: true,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[&texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: None,
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "main",
+                buffers: &[Vertex::desc()],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "main",
+                targets: &[wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                    blend: Some(wgpu::BlendState {
+                        color: wgpu::BlendComponent::REPLACE,
+                        alpha: wgpu::BlendComponent::REPLACE,
+                    }),
+                    write_mask: wgpu::ColorWrites::all(),
+                }],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                clamp_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+        });
+
+        // buffer
+
+        const VERTICES: &[Vertex] = &[
+            Vertex {
+                position: [-0.5, -0.5, 0.0],
+                tex_coords: [0.0, 1.0],
+            },
+            Vertex {
+                position: [0.5, -0.5, 0.0],
+                tex_coords: [1.0, 1.0],
+            },
+            Vertex {
+                position: [0.5, 0.5, 0.0],
+                tex_coords: [1.0, 0.0],
+            },
+            Vertex {
+                position: [-0.5, 0.5, 0.0],
+                tex_coords: [0.0, 0.0],
+            },
+        ];
+
+        const INDICES: &[u16] = &[0, 2, 3, 2, 0, 1];
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let indices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let texture =
+            Texture::from_bytes(&device, &queue, include_bytes!("wood_texture.png"), None).unwrap();
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                },
+            ],
+            label: None,
+        });
+
         Renderer {
             instance,
             adapter,
@@ -47,6 +178,11 @@ impl Renderer {
             queue,
             initialized: false,
             surfaces: Default::default(),
+            render_pipeline,
+            //
+            vertex_buffer,
+            indices_buffer,
+            bind_group,
         }
     }
 
@@ -61,7 +197,7 @@ impl Renderer {
         let surface = unsafe { self.instance.create_surface(window) };
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_preferred_format(&self.adapter).unwrap(),
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Immediate,
@@ -86,7 +222,15 @@ impl Renderer {
 
     pub fn update(&mut self) {
         for (_, (surface, config)) in self.surfaces.iter_mut() {
-            match render_surface(surface, &mut self.device, &mut self.queue) {
+            match render_surface(
+                surface,
+                &mut self.device,
+                &mut self.queue,
+                &self.render_pipeline,
+                &self.vertex_buffer,
+                &self.indices_buffer,
+                &self.bind_group,
+            ) {
                 Ok(_) => {}
                 Err(wgpu::SurfaceError::Lost) => surface.configure(&self.device, &config),
                 Err(wgpu::SurfaceError::OutOfMemory) => println!("Out of memory"),
@@ -100,6 +244,10 @@ fn render_surface(
     surface: &mut Surface,
     device: &mut wgpu::Device,
     queue: &mut wgpu::Queue,
+    render_pipeline: &RenderPipeline,
+    vertex_buffer: &wgpu::Buffer,
+    indices_buffer: &wgpu::Buffer,
+    bind_group: &wgpu::BindGroup,
 ) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_frame()?.output;
     let view = output
@@ -109,7 +257,7 @@ fn render_surface(
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     {
-        let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[wgpu::RenderPassColorAttachment {
                 view: &view,
@@ -126,6 +274,13 @@ fn render_surface(
             }],
             depth_stencil_attachment: None,
         });
+
+        render_pass.set_pipeline(render_pipeline);
+        render_pass.set_bind_group(0, bind_group, &[]);
+        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+        render_pass.set_index_buffer(indices_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
+        render_pass.draw_indexed(0..6, 0, 0..1);
     }
     queue.submit(std::iter::once(encoder.finish()));
     Ok(())
