@@ -1,7 +1,9 @@
 mod buffer;
 mod camera;
-mod surface;
+mod material;
+mod renderable;
 pub mod renderer;
+mod surface;
 mod texture;
 
 use app::{AppStage, Plugin, Stage, StageLabel};

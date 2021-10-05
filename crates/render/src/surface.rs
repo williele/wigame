@@ -2,14 +2,19 @@ use util::cgmath;
 use wgpu::util::DeviceExt;
 use window_plugin::winit::window::Window;
 
-use crate::camera::Camera;
+use crate::{
+    camera::{camera_projection_layout, Camera, PerspectiveProjection},
+    renderable::Renderable,
+};
 
 pub struct SurfaceInfo {
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
-    camera: Camera,
-    camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
+    // camera: Camera,
+    // camera_buffer: wgpu::Buffer,
+    proj: PerspectiveProjection,
+    proj_buffer: wgpu::Buffer,
+    camera_proj_bind_group: wgpu::BindGroup,
 }
 
 impl SurfaceInfo {
@@ -30,6 +35,9 @@ impl SurfaceInfo {
             eye: (0., 0., 2.).into(),
             target: (0., 0., 0.).into(),
             up: cgmath::Vector3::unit_y(),
+        };
+
+        let proj = PerspectiveProjection {
             aspect: size.width as f32 / size.height as f32,
             fovy: 45.,
             znear: 0.1,
@@ -42,21 +50,35 @@ impl SurfaceInfo {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let proj_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
-            layout: &Camera::layout(device),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: camera_buffer.as_entire_binding(),
-            }],
+            contents: bytemuck::cast_slice(&[proj.uniform()]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_proj_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &camera_projection_layout(device),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: proj_buffer.as_entire_binding(),
+                },
+            ],
         });
 
         Self {
             surface,
             config,
-            camera,
-            camera_buffer,
-            camera_bind_group,
+            // camera,
+            // camera_buffer,
+            proj,
+            proj_buffer,
+            camera_proj_bind_group,
         }
     }
 
@@ -65,11 +87,11 @@ impl SurfaceInfo {
         self.config.height = height;
         self.surface.configure(device, &self.config);
 
-        self.camera.aspect = width as f32 / height as f32;
+        self.proj.aspect = width as f32 / height as f32;
         queue.write_buffer(
-            &self.camera_buffer,
+            &self.proj_buffer,
             0,
-            bytemuck::cast_slice(&[self.camera.uniform()]),
+            bytemuck::cast_slice(&[self.proj.uniform()]),
         )
     }
 
@@ -77,10 +99,7 @@ impl SurfaceInfo {
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        render_pipeline: &wgpu::RenderPipeline,
-        texture_bind_group: &wgpu::BindGroup,
-        vertex_buffer: &wgpu::Buffer,
-        indices_buffer: &wgpu::Buffer,
+        renderable: &Renderable,
     ) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_frame()?.output;
         let view = output
@@ -108,14 +127,7 @@ impl SurfaceInfo {
                 depth_stencil_attachment: None,
             });
 
-            render_pass.set_pipeline(render_pipeline);
-            render_pass.set_bind_group(0, texture_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-
-            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            render_pass.set_index_buffer(indices_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-            render_pass.draw_indexed(0..6, 0, 0..1);
+            renderable.render(&mut render_pass, &self.camera_proj_bind_group);
         }
 
         queue.submit(std::iter::once(encoder.finish()));

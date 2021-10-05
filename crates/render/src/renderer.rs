@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
 use app::{EventReader, Events, ParRunnable, SystemBuilder};
-use wgpu::util::DeviceExt;
 use window_plugin::{
     winit::window::{Window, WindowId},
     WindowClosed, WindowCreated, WindowManager, WindowResized,
 };
 
-use crate::{buffer::Vertex, camera::Camera, surface::SurfaceInfo, texture::Texture, RenderStage};
+use crate::{renderable::Renderable, surface::SurfaceInfo, RenderStage};
 
 pub struct Renderer {
     pub instance: wgpu::Instance,
@@ -18,10 +17,7 @@ pub struct Renderer {
 
     surface_infos: HashMap<WindowId, SurfaceInfo>,
     //
-    render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    indices_buffer: wgpu::Buffer,
-    texture_bind_group: wgpu::BindGroup,
+    renderable: Renderable,
 }
 
 impl Renderer {
@@ -46,130 +42,8 @@ impl Renderer {
             .await
             .unwrap();
 
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: None,
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-        });
-
-        let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: None,
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            comparison: false,
-                            filtering: true,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &[&texture_bind_group_layout, &Camera::layout(&device)],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: None,
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "main",
-                buffers: &[Vertex::desc()],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "main",
-                targets: &[wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    blend: Some(wgpu::BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
-                    }),
-                    write_mask: wgpu::ColorWrites::all(),
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                clamp_depth: false,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-        });
-
         // buffer
-        const VERTICES: &[Vertex] = &[
-            Vertex {
-                position: [-0.5, -0.5, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [0.5, -0.5, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-            Vertex {
-                position: [0.5, 0.5, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [-0.5, 0.5, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-        ];
-
-        const INDICES: &[u16] = &[0, 2, 3, 2, 0, 1];
-
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let indices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let texture =
-            Texture::from_bytes(&device, &queue, include_bytes!("wood_texture.png"), None).unwrap();
-        let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                },
-            ],
-            label: None,
-        });
+        let renderable = Renderable::new(&device, &queue);
 
         Renderer {
             instance,
@@ -178,11 +52,7 @@ impl Renderer {
             queue,
             initialized: false,
             surface_infos: Default::default(),
-            //
-            render_pipeline,
-            vertex_buffer,
-            indices_buffer,
-            texture_bind_group,
+            renderable,
         }
     }
 
@@ -212,14 +82,7 @@ impl Renderer {
 
     pub fn render(&mut self) {
         for (_, surface_info) in self.surface_infos.iter() {
-            match surface_info.render(
-                &self.device,
-                &self.queue,
-                &self.render_pipeline,
-                &self.texture_bind_group,
-                &self.vertex_buffer,
-                &self.indices_buffer,
-            ) {
+            match surface_info.render(&self.device, &self.queue, &self.renderable) {
                 Ok(_) => {}
                 Err(wgpu::SurfaceError::OutOfMemory) => println!("Out of memory"),
                 Err(err) => eprintln!("Render error: {:?}", err),
