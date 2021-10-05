@@ -1,4 +1,6 @@
 mod buffer;
+mod camera;
+mod surface;
 pub mod renderer;
 mod texture;
 
