@@ -1,12 +1,17 @@
-use crate::{Events, ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World};
+use crate::{
+    asset_event_sys, free_unused_assets_sys, update_asset_storage_sys, Asset, AssetDaemon,
+    AssetEvent, Events, ParRunnable, Resource, Resources, Schedule, Stage, StageLabel, World,
+};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum AppStage {
     Begin,
     Startup,
+    LoadAssets,
     PreUpdate,
     Update,
     PostUpdate,
+    AssetEvents,
     End,
 }
 impl StageLabel for AppStage {
@@ -14,9 +19,11 @@ impl StageLabel for AppStage {
         match self {
             AppStage::Begin => Box::new("App:Begin"),
             AppStage::Startup => Box::new("App:Startup"),
+            AppStage::LoadAssets => Box::new("App:LoadAssets"),
             AppStage::PreUpdate => Box::new("App:PreUpdate"),
             AppStage::Update => Box::new("App:Update"),
             AppStage::PostUpdate => Box::new("App:PostUpdate"),
+            AppStage::AssetEvents => Box::new("App:AssetEvents"),
             AppStage::End => Box::new("App:End"),
         }
     }
@@ -52,10 +59,14 @@ impl App {
         let mut app = App::default();
         app.add_stage(AppStage::Begin, Stage::sequence())
             .add_stage(AppStage::Startup, Stage::sequence_once())
+            .add_stage(AppStage::LoadAssets, Stage::sequence())
             .add_stage(AppStage::PreUpdate, Stage::sequence())
             .add_stage(AppStage::Update, Stage::sequence())
             .add_stage(AppStage::PostUpdate, Stage::sequence())
+            .add_stage(AppStage::AssetEvents, Stage::sequence())
             .add_stage(AppStage::End, Stage::sequence())
+            .add_resource(AssetDaemon::default())
+            .add_system(free_unused_assets_sys())
             .add_event::<AppExit>();
         app
     }
@@ -76,6 +87,18 @@ impl App {
     pub fn add_event<T: 'static>(&mut self) -> &mut Self {
         self.add_resource(Events::<T>::default())
             .add_system(Events::<T>::update_sys())
+    }
+
+    pub fn add_asssets<T: Asset>(&mut self) -> &mut Self {
+        let assets = {
+            let mut daemon = self.resources.get_mut::<AssetDaemon>().unwrap();
+            daemon.register_asset::<T>()
+        };
+
+        self.add_resource(assets)
+            .add_event::<AssetEvent<T>>()
+            .add_system(asset_event_sys::<T>())
+            .add_system(update_asset_storage_sys::<T>())
     }
 
     pub fn add_stage(&mut self, label: impl StageLabel, stage: Stage) -> &mut Self {

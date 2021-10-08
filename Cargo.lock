@@ -1491,9 +1491,11 @@ dependencies = [
  "atomic_refcell",
  "bit-set",
  "cgmath",
+ "crossbeam-channel",
  "downcast-rs",
  "parking_lot",
  "pollster",
+ "rand",
  "rayon",
  "smallvec",
 ]

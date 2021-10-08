@@ -1,5 +1,6 @@
 pub mod accessor;
 pub mod app;
+pub mod asset;
 pub mod component;
 pub mod entity;
 pub mod event;
@@ -9,6 +10,7 @@ pub mod world;
 
 pub use accessor::*;
 pub use app::*;
+pub use asset::*;
 pub use component::*;
 pub use entity::*;
 pub use event::*;
