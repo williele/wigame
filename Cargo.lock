@@ -1490,6 +1490,7 @@ dependencies = [
  "anyhow",
  "atomic_refcell",
  "bit-set",
+ "bitflags",
  "cgmath",
  "crossbeam-channel",
  "downcast-rs",

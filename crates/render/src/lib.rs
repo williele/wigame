@@ -1,16 +1,19 @@
-mod buffer;
-mod camera;
-mod material;
-mod renderable;
-pub mod renderer;
-mod surface;
-mod texture;
+pub mod base;
+mod wgpu_backend;
+
+// mod buffer;
+// mod camera;
+// mod material;
+// mod renderable;
+// pub mod renderer;
+// mod surface;
+// mod texture;
+// pub use renderer::*;
+// pub use wgpu;
 
 use app::{AppStage, Plugin, Stage, StageLabel};
-use util::pollster;
 
-pub use renderer::*;
-pub use wgpu;
+pub use base::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RenderStage {
@@ -33,8 +36,6 @@ pub struct RenderPlugin {}
 
 impl Plugin for RenderPlugin {
     fn build(&mut self, app: &mut app::App) {
-        let renderer = pollster::block_on(Renderer::new());
-
         app.add_stage_before(AppStage::End, RenderStage::Render, Stage::sequence())
             .add_stage_before(
                 RenderStage::Render,
@@ -46,10 +47,14 @@ impl Plugin for RenderPlugin {
                 RenderStage::PostRender,
                 Stage::sequence(),
             )
-            .add_resource(renderer)
-            .add_system(handle_window_created_sys())
-            .add_system(handle_window_resized_sys())
-            .add_system(handle_window_closed_sys())
-            .add_system(update_renderer_sys());
+            .add_asssets::<Shader>()
+            .add_asssets::<RenderPipelineDescriptor>()
+            .add_plugin(wgpu_backend::WgpuPlugin::default());
+
+        // .add_resource(renderer)
+        // .add_system(handle_window_created_sys())
+        // .add_system(handle_window_resized_sys())
+        // .add_system(handle_window_closed_sys())
+        // .add_system(update_renderer_sys());
     }
 }
