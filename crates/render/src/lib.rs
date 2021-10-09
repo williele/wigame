@@ -48,13 +48,7 @@ impl Plugin for RenderPlugin {
                 Stage::sequence(),
             )
             .add_asssets::<Shader>()
-            .add_asssets::<RenderPipelineDescriptor>()
+            .add_asssets::<Pipeline>()
             .add_plugin(wgpu_backend::WgpuPlugin::default());
-
-        // .add_resource(renderer)
-        // .add_system(handle_window_created_sys())
-        // .add_system(handle_window_resized_sys())
-        // .add_system(handle_window_closed_sys())
-        // .add_system(update_renderer_sys());
     }
 }

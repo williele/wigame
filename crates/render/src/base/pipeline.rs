@@ -1,6 +1,6 @@
 use app::Handle;
 
-use crate::{BindGroupDescriptor, MultisampleState, PrimitiveTopology, Shader};
+use crate::{BindGroupDescriptor, MultisampleState, Shader, VertexBufferLayout};
 
 #[derive(Clone, Debug, Default)]
 pub struct PipelineLayout {
@@ -20,10 +20,9 @@ pub struct FragmentState {
 }
 
 #[derive(Debug, Clone)]
-pub struct RenderPipelineDescriptor {
-    pub layout: Option<PipelineLayout>,
+pub struct Pipeline {
+    pub buffers: Vec<VertexBufferLayout>,
     pub vertex: VertexState,
     pub fragment: Option<FragmentState>,
-    pub primitive: PrimitiveTopology,
     pub multisample: MultisampleState,
 }

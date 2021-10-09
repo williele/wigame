@@ -26,6 +26,7 @@ pub fn window_runner(mut app: App) {
             .is_some()
         {
             *control_flow = ControlFlow::Exit;
+            return;
         }
 
         match event {

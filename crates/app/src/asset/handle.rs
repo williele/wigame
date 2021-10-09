@@ -81,7 +81,7 @@ impl<T: Asset> Handle<T> {
         matches!(self.handle_type, HandleType::Strong(_))
     }
 
-    pub fn close_weak(&self) -> Self {
+    pub fn clone_weak(&self) -> Self {
         Self {
             id: self.id,
             handle_type: HandleType::Weak,
@@ -104,7 +104,7 @@ impl<T: Asset> Drop for Handle<T> {
         match self.handle_type {
             HandleType::Weak => {}
             HandleType::Strong(ref sender) => {
-                let _ = sender.send(RefChange::Decrement(self.id)).unwrap();
+                let _ = sender.send(RefChange::Decrement(self.id));
             }
         }
     }

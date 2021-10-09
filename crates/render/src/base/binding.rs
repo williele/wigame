@@ -1,4 +1,4 @@
-use crate::{ShaderStages, TextureSampleType, TextureViewDimension};
+use crate::{ShaderStages, TextureSampleType, TextureViewDimension, VertexFormat};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindGroupDescriptor {
@@ -30,4 +30,17 @@ pub enum BindType {
         view_dimension: TextureViewDimension,
         sample_type: TextureSampleType,
     },
+}
+
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+pub struct VertexBufferLayout {
+    pub array_stride: u64,
+    pub attributes: Vec<VertexAttribute>,
+}
+
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
+pub struct VertexAttribute {
+    pub offset: u64,
+    pub shader_location: u32,
+    pub format: VertexFormat,
 }

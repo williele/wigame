@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use app::{EventReader, Events, ParRunnable, SystemBuilder};
 use window_plugin::{
@@ -13,7 +13,7 @@ use super::surface::SurfaceData;
 pub struct Renderer {
     pub instance: wgpu::Instance,
     pub adapter: wgpu::Adapter,
-    pub device: wgpu::Device,
+    pub device: Arc<wgpu::Device>,
     pub queue: wgpu::Queue,
     pub initialized: bool,
     pub surface_data: HashMap<WindowId, SurfaceData>,
@@ -44,7 +44,7 @@ impl Renderer {
         Renderer {
             instance,
             adapter,
-            device,
+            device: Arc::new(device),
             queue,
             initialized: false,
             surface_data: Default::default(),
